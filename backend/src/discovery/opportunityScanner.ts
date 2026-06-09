@@ -4,7 +4,7 @@
  * Implements the `OpportunityScanner` contract from the design document and
  * Requirements 7.1, 7.2, 7.3:
  *
- *   7.1  WHEN three hours have elapsed since the previous scan for a User, THE
+ *   7.1  WHEN one day has elapsed since the previous scan for a User, THE
  *        Opportunity_Scanner SHALL query the MyCareersFuture API for jobs
  *        matching the User's target roles and industries.
  *   7.2  WHEN the Opportunity_Scanner retrieves a job, THE Opportunity_Scanner
@@ -18,7 +18,7 @@
  *    scanner is unit/integration testable without touching the network or AWS
  *    (see task 12.3). The default MCF client is built from an injectable
  *    `fetch`-like function.
- *  - The 3-hour gate is evaluated against the User's persisted `last_scan_at`
+ *  - The daily gate is evaluated against the User's persisted `last_scan_at`
  *    (per the design's elapsed-time scheduling semantics), so the scanner is a
  *    no-op when invoked again too soon — even if EventBridge fires more often.
  *  - **Exa fallback SEAM (task 12.2):** discovery is funnelled through a single
@@ -40,13 +40,14 @@ import {
   type UserConfig,
   createLogger,
 } from '@worksignal/shared';
+import { MAX_JOBS_PER_SCAN, SCAN_LOOKBACK_DAYS } from '../config.js';
 
 /* ------------------------------------------------------------------ *
  * Constants
  * ------------------------------------------------------------------ */
 
-/** Minimum elapsed time between scans for a user (Req 7.1): three hours. */
-export const SCAN_INTERVAL_MS = 3 * 60 * 60 * 1000;
+/** Minimum elapsed time between scans for a user (Req 7.1): one day. */
+export const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 /** Base URL of the MyCareersFuture API (design: Opportunity_Scanner). */
 export const MCF_API_BASE = 'https://api.mycareersfuture.gov.sg';
@@ -175,10 +176,14 @@ export interface OpportunityScannerDeps {
   logger?: Logger;
   usersTable?: string;
   jobsTable?: string;
-  /** Override the 3-hour scan interval (ms). Defaults to {@link SCAN_INTERVAL_MS}. */
+  /** Override the daily scan interval (ms). Defaults to {@link SCAN_INTERVAL_MS}. */
   scanIntervalMs?: number;
   /** MCF results requested per search term. */
   searchLimit?: number;
+  /** Cap on total jobs kept after dedup + recency filter. Defaults to MAX_JOBS_PER_SCAN. */
+  maxJobsPerScan?: number;
+  /** Only keep jobs posted within this many days. Defaults to SCAN_LOOKBACK_DAYS. */
+  scanLookbackDays?: number;
 }
 
 /* ------------------------------------------------------------------ *
@@ -202,7 +207,7 @@ export function createMcfSearch(
         'content-type': 'application/json',
         accept: 'application/json',
       },
-      body: JSON.stringify({ search }),
+      body: JSON.stringify({ search, sortBy: ['new_posting_date'] }),
     });
     if (!res.ok) {
       throw new Error(`MCF API error: HTTP ${res.status}`);
@@ -323,6 +328,14 @@ function dedupeRawJobs(jobs: RawMcfJob[]): RawMcfJob[] {
   return out;
 }
 
+/**
+ * Drop jobs older than `lookbackDays`. Called after mapping so we can reuse
+ * the already-computed `mcf_listing_days` field rather than re-parsing dates.
+ */
+function filterByRecency(jobs: DiscoveredJob[], lookbackDays: number): DiscoveredJob[] {
+  return jobs.filter((j) => j.mcf_listing_days <= lookbackDays);
+}
+
 /* ------------------------------------------------------------------ *
  * Scanner implementation
  * ------------------------------------------------------------------ */
@@ -338,6 +351,8 @@ export class OpportunityScannerImpl implements OpportunityScanner {
   private readonly jobsTable: string;
   private readonly scanIntervalMs: number;
   private readonly searchLimit: number;
+  private readonly maxJobsPerScan: number;
+  private readonly scanLookbackDays: number;
   private readonly mcfApiBase: string;
 
   constructor(deps: OpportunityScannerDeps = {}) {
@@ -357,12 +372,14 @@ export class OpportunityScannerImpl implements OpportunityScanner {
     this.jobsTable = deps.jobsTable ?? DEFAULT_JOBS_TABLE;
     this.scanIntervalMs = deps.scanIntervalMs ?? SCAN_INTERVAL_MS;
     this.searchLimit = deps.searchLimit ?? DEFAULT_SEARCH_LIMIT;
+    this.maxJobsPerScan = deps.maxJobsPerScan ?? MAX_JOBS_PER_SCAN;
+    this.scanLookbackDays = deps.scanLookbackDays ?? SCAN_LOOKBACK_DAYS;
   }
 
   /**
    * Scan for new jobs for a user (Req 7.1–7.3).
    *
-   * No-op (returns `[]`) when fewer than three hours have elapsed since the
+   * No-op (returns `[]`) when fewer than 24 hours have elapsed since the
    * user's `last_scan_at`. Otherwise discovers jobs (MCF, with the Exa fallback
    * seam), persists each to the Jobs table, and stamps `last_scan_at`.
    */
@@ -377,7 +394,7 @@ export class OpportunityScannerImpl implements OpportunityScanner {
     const log = this.logger.child({ userId });
 
     if (!this.isScanDue(user)) {
-      log.debug('Scan skipped: 3-hour interval not yet elapsed', {
+      log.debug('Scan skipped: daily interval not yet elapsed', {
         last_scan_at: user.last_scan_at,
       });
       return [];
@@ -403,7 +420,7 @@ export class OpportunityScannerImpl implements OpportunityScanner {
     return jobs;
   }
 
-  /** True when three hours have elapsed since the user's last scan (Req 7.1). */
+  /** True when 24 hours have elapsed since the user's last scan (Req 7.1). */
   private isScanDue(user: UserConfig): boolean {
     if (!user.last_scan_at) return true;
     const last = new Date(user.last_scan_at).getTime();
@@ -426,12 +443,13 @@ export class OpportunityScannerImpl implements OpportunityScanner {
     const now = this.now();
     try {
       const raw = await this.runMcfSearch(user);
-      return dedupeRawJobs(raw).map((job) =>
+      const mapped = dedupeRawJobs(raw).map((job) =>
         mapMcfJob(job, user.user_id, scannedAt, now, {
           mcfApiBase: this.mcfApiBase,
           generateJobId: this.generateJobId,
         }),
       );
+      return filterByRecency(mapped, this.scanLookbackDays).slice(0, this.maxJobsPerScan);
     } catch (error) {
       log.warn('MCF discovery failed', { error: String(error) });
       if (this.exaFallback) {

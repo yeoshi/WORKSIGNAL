@@ -169,17 +169,17 @@ export function formatUser(user: UserConfig): string {
   const p = user.profile;
   const lines = [
     'USER PROFILE:',
-    `- Career stage: ${user.career_stage}`,
-    `- Residency status: ${user.residency_status}`,
-    `- Current role: ${p.current_role}`,
-    `- Years of experience: ${p.years_experience}`,
-    formatList('- Skills', p.skills),
-    `- Education: ${p.education}`,
-    `- University: ${p.university}`,
-    formatList('- Target roles', p.target_roles),
-    formatList('- Target industries', p.target_industries),
-    formatList('- Dream companies', p.dream_companies),
-    `- Priority ranking (highest first): ${p.priority_ranking.join(' > ')}`,
+    `- Career stage: ${user.career_stage ?? 'unknown'}`,
+    `- Residency status: ${user.residency_status ?? 'unknown'}`,
+    `- Current role: ${p.current_role ?? 'unknown'}`,
+    `- Years of experience: ${p.years_experience ?? 0}`,
+    formatList('- Skills', p.skills ?? []),
+    `- Education: ${p.education ?? 'not specified'}`,
+    `- University: ${p.university ?? 'not specified'}`,
+    formatList('- Target roles', p.target_roles ?? []),
+    formatList('- Target industries', p.target_industries ?? []),
+    formatList('- Dream companies', p.dream_companies ?? []),
+    `- Priority ranking (highest first): ${(p.priority_ranking ?? []).join(' > ') || 'not specified'}`,
     `- Minimum salary (SGD/month): ${user.non_negotiables.min_salary}`,
   ];
   if (user.career_switch_context) {
