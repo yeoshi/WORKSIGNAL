@@ -1,9 +1,7 @@
 # WORKSIGNAL — Backend Tasks
 **Owner:** Rose | **Deadline:** Jun 10 11:59pm | **Region:** us-east-1
 
----
-- upon onboarding, directly scrap job from past 2 weeks that meets user criteria
-- create job verdict for all of them in the back end for the user 
+
 
 ## Codebase Structure
 
@@ -67,6 +65,31 @@ WORKSIGNAL/
 **What's fully tested:** 508 unit + integration tests pass (`npm run test` from repo root)
 
 **What's missing for live:** AWS resources not created, env vars incomplete, dashboard route stub not wired, background Lambda handlers don't exist
+
+---
+
+## PROGRESS SNAPSHOT (as of Jun 10)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 0 — Env | ⚠️ 2/4 done | ❌ `EXA_API_KEY` missing · ❌ `ENCRYPTION_SECRET` missing |
+| Phase 1 — AWS Resources | ✅ Done | All 6 DynamoDB tables ACTIVE · S3 bucket exists · Bedrock tested |
+| Phase 2 — API Tests | ⚠️ 3/5 done | ✅ MCF · ✅ Bedrock · ✅ DynamoDB · ❌ Exa (no key) · ❓ S3 not confirmed |
+| Phase 3 — SES | ✅ Done | Both emails verified · config in `.env.local` |
+| Phase 4 — Integration Tests | ❌ Not started | — |
+| Phase 5 — Dashboard Route | ✅ Done | Fully wired to DynamoDB (no longer a stub) |
+| Phase 6 — Full Pipeline | ⚠️ Script written | `runFullFlow.ts` is complete but not yet run E2E; needs EXA_API_KEY first |
+| Phase 7 — Lambda Handlers | ❌ Not started | `handlers/` dir does not exist |
+| Phase 8 — Vercel Deploy | ❌ Not started | `NEXTAUTH_URL` still `localhost:3000` |
+| Phase 9 — E2E QA | ❌ Not started | Blocked by Phase 8 |
+
+**Immediate unblocking steps (in order):**
+1. Add `EXA_API_KEY=...` to `/WORKSIGNAL/.env.aws` and `frontend/.env.local`
+2. Add `ENCRYPTION_SECRET=...` to `frontend/.env.local` (32-byte hex — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+3. `cd backend && npx tsx src/scripts/seedDashboard.ts` — push complete user record to DynamoDB
+4. `npx tsx src/scripts/runFullFlow.ts` — run full MCF → debate → DynamoDB pipeline
+5. Start Phase 7 Lambda handlers (needed for autonomous operation and recalibration)
+6. Start Phase 8 Vercel deploy
 
 ---
 
@@ -178,16 +201,16 @@ aws dynamodb list-tables --region us-east-1 --output text
 
 ---
 
-## PHASE 0 — Environment Fix
+## PHASE 0 — Environment Fix · ⚠️ PARTIAL (2/4)
 **Time:** 15 min | **Blocks everything else**
 
-### Task 0.1 — Fix AWS region
+### ✅ Task 0.1 — Fix AWS region
 ```bash
 # Edit frontend/.env.local — change:
 # AWS_DEFAULT_REGION=us-east-1
 ```
 
-### Task 0.2 — Get fresh AWS credentials
+### ✅ Task 0.2 — Get fresh AWS credentials
 The session tokens in `.env.local` are expired. Get fresh ones from the hackathon AWS account:
 ```bash
 # If using hackathon-provided IAM role:
@@ -204,7 +227,7 @@ aws sts get-caller-identity --region us-east-1
 
 Update `.env.local` with the new credentials (or use the named profile).
 
-### Task 0.3 — Add Exa API key
+### ❌ Task 0.3 — Add Exa API key  ← BLOCKED: key not in any env file
 ```bash
 # Add to frontend/.env.local:
 # EXA_API_KEY=your_key_from_hackathon_credits
@@ -215,7 +238,7 @@ Also add to `backend/.env` (create if not exists):
 echo "EXA_API_KEY=your_key_here" >> /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/backend/.env
 ```
 
-### Task 0.4 — Add encryption secret
+### ❌ Task 0.4 — Add encryption secret  ← BLOCKED: not in frontend/.env.local
 Auth service requires a 32-byte encryption secret for Gmail token AES-256-GCM:
 ```bash
 # Generate a random 32-byte hex secret:
@@ -233,7 +256,7 @@ aws bedrock list-foundation-models --region us-east-1 | head -20
 
 ---
 
-## PHASE 1 — Provision AWS Resources
+## PHASE 1 — Provision AWS Resources · ✅ DONE
 **Time:** 45 min | **Requires Phase 0**
 
 ---
@@ -294,7 +317,7 @@ The `DynamoDBWrapper` itself (`shared/src/utils/dynamodb.ts:29`) reads the regio
 
 ---
 
-### Task 1.1 — Create DynamoDB tables
+### ✅ Task 1.1 — Create DynamoDB tables
 
 All 6 table definitions are in `infra/src/dynamodb.ts`. Create them via CLI using the **exact names the code expects** (no prefix):
 
@@ -423,7 +446,7 @@ aws dynamodb delete-item \
 # Instead the pipeline will load (empty list) without errors.
 ```
 
-### Task 1.2 — Create S3 bucket
+### ✅ Task 1.2 — Create S3 bucket
 
 ```bash
 # Create bucket (bucket names must be globally unique — add your account suffix)
@@ -448,7 +471,7 @@ aws s3 ls s3://worksignal-documents-dev --region us-east-1
 # Should not error
 ```
 
-### Task 1.3 — Verify Bedrock model access
+### ✅ Task 1.3 — Verify Bedrock model access
 
 ```bash
 # Check Claude Sonnet is available in us-east-1:
@@ -471,10 +494,10 @@ Update `backend/src/bedrock/invoke.ts` with the correct model ID if needed.
 +---------------------------------------------+-------+
 ---
 
-## PHASE 2 — Test External API Connections
+## PHASE 2 — Test External API Connections · ⚠️ PARTIAL (3/5)
 **Time:** 30 min | **Requires Phase 0**
 
-### Task 2.1 — Test MCF API (free, no auth) - done ( w 2 weeks )
+### ✅ Task 2.1 — Test MCF API
 ```bash
 curl -s -X POST \
   "https://api.mycareersfuture.gov.sg/v2/search?limit=5&page=0" \
@@ -484,7 +507,7 @@ curl -s -X POST \
 **Expected:** JSON with `results` array containing Singapore job listings.
 **Frontend impact:** OpportunityScanner feeds jobs into Jobs DynamoDB → Dashboard action_needed cards.
 
-### Task 2.2 — Test Exa API - 
+### Task 2.2 — Test Exa API  ← blocked by missing EXA_API_KEY
 
 
 ```bash
@@ -496,7 +519,7 @@ curl -s -X POST https://api.exa.ai/search \
 **Expected:** JSON with `results` array containing web search results.
 **Frontend impact:** Risk Agent uses Exa → red_flags in debate card → JobDetailView.
 
-### Task 2.3 — Test Bedrock - tested via test_bedrock.js
+### ✅ Task 2.3 — Test Bedrock
 ```bash
 aws bedrock-runtime invoke-model \
   --model-id "anthropic.claude-3-5-sonnet-20241022-v2:0" \
@@ -509,7 +532,7 @@ aws bedrock-runtime invoke-model \
 **Expected:** Response with `"WORKSIGNAL OK"` in content.
 **Frontend impact:** All 4 debate agents + material generation use Bedrock → debate cards, cover letter, customised resume.
 
-### Task 2.4 — Test DynamoDB write + read
+### ✅ Task 2.4 — Test DynamoDB write + read
 ```bash
 # Write a test record
 aws dynamodb put-item \
@@ -532,7 +555,7 @@ aws dynamodb delete-item \
 
 okay done!
 
-### Task 2.5 — Test S3 upload + pre-signed URL
+### Task 2.5 — Test S3 upload + pre-signed URL  ← not confirmed
 ```bash
 # Create a test file
 echo "test resume content" > /tmp/test-resume.pdf
@@ -552,10 +575,10 @@ aws s3 rm s3://worksignal-documents-dev/resumes/test-user-001/test.pdf --region 
 
 ---
 
-## PHASE 3 — SES Email Setup [ tested ]
+## PHASE 3 — SES Email Setup · ✅ DONE
 **Time:** 15 min | **Required for application sending**
 
-### Task 3.1 — Verify sender email identity
+### ✅ Task 3.1 — Verify sender email identity
 ```bash
 # Verify the email address that will send applications (must match SES config)
 aws ses verify-email-identity \
@@ -571,14 +594,15 @@ aws ses verify-email-identity \
 echo "Check your inbox for the verification email and click the link."
 ```
 
-### Task 3.2 — Add SES config to .env.local
+### ✅ Task 3.2 — Add SES config to .env.local
 ```bash
 # Add to frontend/.env.local:
 # SES_FROM_EMAIL=lx.rose.lin@gmail.com
 # SES_REGION=us-east-1
 ```
 
-### Task 3.3 — Test SES send
+### Task 3.3 — Test SES send  ← not confirmed 
+( i tested manually )
 ```bash
 aws ses send-email \
   --from "lx.rose.lin@gmail.com" \
@@ -589,7 +613,7 @@ aws ses send-email \
 
 ---
 
-## PHASE 4 — Run Integration Tests Against Real AWS
+## PHASE 4 — Run Integration Tests Against Real AWS · ❌ NOT STARTED
 **Time:** 30 min | **Requires Phases 1-3**
 
 ### Task 4.1 — Run the backend integration tests
@@ -618,7 +642,7 @@ npx tsx src/scripts/runDebateDemo.ts
 
 ---
 
-## PHASE 5 — Wire Dashboard Route to Real Data
+## PHASE 5 — Wire Dashboard Route to Real Data · ✅ DONE
 **Time:** 1 hr | **Required for frontend to show real data**
 
 The dashboard route (`frontend/app/api/dashboard/route.ts`) returns an empty stub when `DEMO_MODE=false`. All other routes are already wired to real backend services. This is the one gap.
@@ -673,12 +697,12 @@ Then assemble the same shape as `demoDashboard` using real data.
 
 ---
 
-## PHASE 6 — Seed Demo Data for Judges
+## PHASE 6 — Seed Demo Data for Judges · ⚠️ SCRIPT WRITTEN — NOT YET RUN E2E
 **Time:** ~5 min to run | **Required for a convincing demo**
 
 Runs the complete live pipeline: MCF scan → pre-filter → 4 Bedrock debate agents per job → save to DynamoDB. This is the command that shows the full flow working end-to-end.
 
-### Task 6.1 — Run the full pipeline (single command)
+### ⚠️ Task 6.1 — Run the full pipeline (single command)  ← script complete; needs EXA key + E2E run to confirm
 
 ```bash
 cd /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/backend
@@ -767,7 +791,7 @@ npx tsx src/scripts/runFullFlow.ts
 
 **If you get `ExpiredTokenException`:** Your session credentials expired. Update `.env.aws` and `~/.aws/credentials` with fresh tokens.
 
-### Task 6.2 — Verify dashboard returns live data
+### ❌ Task 6.2 — Verify dashboard returns live data  ← pending runFullFlow.ts success
 
 After running the full flow, sign in and check:
 ```bash
@@ -779,12 +803,12 @@ Expected: `pipeline.total > 0`, `action_needed` contains deadlock jobs, `growth`
 
 ---
 
-## PHASE 7 — Background Agent Lambdas (for EventBridge)
+## PHASE 7 — Background Agent Lambdas (for EventBridge) · ❌ NOT STARTED
 **Time:** 2–3 hrs | **Required for judges to see autonomous agents running**
 
 These background jobs run every 3 hrs (debate scan), 30 min (Gmail poll), and weekly (recalibration). They need Lambda handlers that EventBridge can trigger.
 
-### Task 7.1 — Create debate scan Lambda handler
+### ❌ Task 7.1 — Create debate scan Lambda handler
 
 Create `backend/src/handlers/debateScanHandler.ts`:
 ```typescript
@@ -808,7 +832,7 @@ export const handler = async () => {
 };
 ```
 
-### Task 7.2 — Create Gmail poll Lambda handler
+### ❌ Task 7.2 — Create Gmail poll Lambda handler
 
 Create `backend/src/handlers/gmailPollHandler.ts`:
 ```typescript
@@ -829,7 +853,7 @@ export const handler = async () => {
 };
 ```
 
-### Task 7.3 — Create recalibration Lambda handler
+### ❌ Task 7.3 — Create recalibration Lambda handler
 
 Create `backend/src/handlers/recalibrationHandler.ts`:
 ```typescript
@@ -849,7 +873,7 @@ export const handler = async () => {
 };
 ```
 
-### Task 7.4 — Create Lambda functions in AWS
+### ❌ Task 7.4 — Create Lambda functions in AWS
 
 ```bash
 # First, build the backend
@@ -872,7 +896,7 @@ aws lambda create-function \
   --region us-east-1
 ```
 
-### Task 7.5 — Wire EventBridge to Lambdas
+### ❌ Task 7.5 — Wire EventBridge to Lambdas
 
 ```bash
 # Create EventBridge rule for daily midnight-SGT debate scan
@@ -908,10 +932,10 @@ aws lambda invoke \
 
 ---
 
-## PHASE 8 — Vercel Deployment
+## PHASE 8 — Vercel Deployment · ❌ NOT STARTED
 **Time:** 30 min | **Final step before submission**
 
-### Task 8.1 — Deploy frontend to Vercel
+### ❌ Task 8.1 — Deploy frontend to Vercel
 
 ```bash
 cd /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/frontend
@@ -920,7 +944,7 @@ npx vercel --prod
 
 Note the deployment URL (e.g. `https://worksignal.vercel.app`).
 
-### Task 8.2 — Set Vercel environment variables
+### ❌ Task 8.2 — Set Vercel environment variables
 
 In Vercel dashboard or via CLI, set all env vars:
 ```bash
@@ -937,19 +961,19 @@ vercel env add ENCRYPTION_SECRET production
 vercel env add DEMO_MODE production              # → false (or true for demo safety)
 ```
 
-### Task 8.3 — Update Google OAuth redirect URI
+### ❌ Task 8.3 — Update Google OAuth redirect URI
 
 In Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID:
 - Add `https://worksignal.vercel.app/api/auth/callback/google` to Authorised redirect URIs
 
-### Task 8.4 — Redeploy after env vars
+### ❌ Task 8.4 — Redeploy after env vars
 ```bash
 vercel --prod
 ```
 
 ---
 
-## PHASE 9 — End-to-End Integration Verification
+## PHASE 9 — End-to-End Integration Verification · ❌ NOT STARTED
 **Time:** 30 min | **Final QA before demo**
 
 Run through the full demo flow to verify each step hits real AWS:
@@ -1023,15 +1047,148 @@ If time is short, do these first — they unblock the demo flow:
 
 **Google OAuth `redirect_uri_mismatch`** — Add the exact Vercel callback URL to Google Cloud Console: `https://your-app.vercel.app/api/auth/callback/google`
 
-how about the recalibration feature / how will agents get feedback about how good it is? how might we be able to eval / have a feedback loop ?
+---
 
-side from email response; perhaps user can give direct feedback about the verdict that agent has made 
+## KEY FEATURE STABILITY ASSESSMENT
 
-be able to show to the front end ? 
+---
 
-  Survivors : 0 passed
-  Rejected  : 10 filtered out
+### FEATURE 1 (P0): Job Matching via Multi-Agent Debate
 
-  All jobs were filtered out. Consider relaxing non-negotiables:
-    - Increase min_salary threshold
-    - Accept more employment types or work arrangements
+**What's built:**
+| Sub-feature | Status | Notes |
+|---|---|---|
+| MCF scan (OpportunityScanner) | ✅ Works | Fetches past 14d, saves to Jobs DynamoDB |
+| Pre-filter (non-negotiables) | ✅ Works | salary / employment_type / work_arrangement / location / EP checks |
+| 4 Bedrock debate agents | ✅ Code complete | Ambition · Realism · Risk · Opportunity |
+| Risk Agent Exa research |  | `EXA_API_KEY` not set → agent runs degraded (no company intel) |
+| VerdictPersistence + DynamoDB | ✅ Code complete | Saves AgentVerdicts record; `runFullFlow.ts` embeds `master_decision` |
+| `runFullFlow.ts` script | ✅ Written | Not yet run E2E to completion |
+| Frontend `/api/jobs/[jobId]` | ✅ Wired | Returns job + all 4 agent verdicts + master decision from DynamoDB |
+| Frontend debate log view | ✅ Page exists | `app/jobs/[jobId]/` — DebateCard, DebateCardList, DecisionSummary |
+| Dashboard `action_needed` cards | ✅ Wired | Pulls deadlock jobs from DynamoDB |
+
+**MCF vs Exa for job sourcing:**
+- **MCF (current):** Free, SG-native, structured fields. Filter happens in `OpportunityScanner` by keyword (target roles) + `postingDate` recency. MCF doesn't expose `work_arrangement` field — all jobs get `'any'` which pre-filter now passes through as `'unknown'` (cannot confirm violation). This is correct behaviour.
+- **Exa fallback (`ExaFallback`):** Code exists in `discovery/exaFallback.ts`. It queries Exa with `"[role] Singapore jobs site:mycareersfuture.gov.sg"`. Needs `EXA_API_KEY`. Can be more targeted (embed salary, remote preference in query string) but results are less structured.
+- **Recommendation:** MCF first (already working). Exa fallback only if MCF returns < 5 results.
+
+**Steps to verify this feature works:**
+```bash
+# 1. Add EXA_API_KEY to both env files:
+echo 'EXA_API_KEY=your_key_here' >> /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/.env.aws
+# Also add to frontend/.env.local
+
+# 2. Re-seed user record (has all required fields now):
+cd /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/backend
+npx tsx src/scripts/seedDashboard.ts
+
+# 3. Run full pipeline:
+npx tsx src/scripts/runFullFlow.ts
+# Expected: MCF finds jobs → some pass pre-filter → 4 agents debate each →
+#           verdicts saved to DynamoDB → summary printed
+
+# 4. Check dashboard:
+# Sign in at localhost:3000 → Dashboard should show action_needed cards
+# Click a job card → debate log should show all 4 agent verdicts
+
+# 5. Verify via API:
+curl http://localhost:3000/api/dashboard   # (must be signed in)
+```
+
+**What to change:**
+- ❌ Add `EXA_API_KEY` to `WORKSIGNAL/.env.aws` and `frontend/.env.local` — single biggest blocker
+- Nothing else in the code needs changing; all pre-filter and agent fixes from this session are in
+
+---
+
+### FEATURE 2 (P1): Recalibration + Agent Feedback Loop
+
+**What's built:**
+| Sub-feature | Status | Notes |
+|---|---|---|
+| `RecalibrationEngine` backend | ✅ Exists | Tracks callback_rate, adjusts agent thresholds |
+| `RecalibrationLog` DynamoDB table | ✅ Active | Empty — needs data |
+| Email-based feedback (GmailMonitor) | ✅ Code exists | Polls Gmail for reply signals to sent applications |
+| Recalibration Lambda handler | ❌ Not created | Phase 7.3 not done |
+| Frontend direct feedback UI | ❌ Not implemented | User can't click thumbs up/down on a verdict yet |
+| Weekly auto-recalibration trigger | ❌ Not wired | Needs EventBridge (Phase 7) |
+
+**How the feedback loop works (design):**
+1. WORKSIGNAL sends application via SES → Gmail records as sent
+2. GmailMonitor polls inbox → detects reply (interview invite / rejection)
+3. RecalibrationEngine records outcome → updates `agent_weights` thresholds over time
+4. Next week's debate uses adjusted thresholds per user
+
+**What to change to stabilise this:**
+- ❌ **Create `backend/src/handlers/recalibrationHandler.ts`** (Phase 7.3 code is in the task file above)
+- ❌ **Add a "feedback" button on the frontend job detail page** — POST to a `/api/jobs/[jobId]/feedback` route, write outcome to RecalibrationLog — this is new work (~1 hr)
+- ❌ **Wire EventBridge** (Phase 7.5) to run recalibration weekly
+
+**Steps to test current state** (without Lambda):
+```bash
+# You can manually trigger recalibration via the existing engine:
+cd /Users/roselin/Desktop/SUPERAI/WORKSIGNAL/backend
+npx tsx -e "
+  import { config } from 'dotenv';
+  // load env then:
+  const { RecalibrationEngineImpl } = await import('./src/recalibration/recalibrationEngine.js');
+  // ... not easily scriptable without a small test script
+"
+# Realistically: build the Lambda handler first (Task 7.3), then test it manually
+```
+
+---
+
+### FEATURE 3 (P2): Growth Agent
+
+**What's built:**
+| Sub-feature | Status | Notes |
+|---|---|---|
+| `GrowthAgent` backend | ✅ Exists | Generates roadmaps from SkillGaps |
+| `SkillGaps` DynamoDB table | ✅ Active | Empty — populated by debate agents flagging `key_gaps` |
+| Frontend `/growth` page | ✅ Complete | SkillGapHeader, RoadmapPlan, WeekCard |
+| `/api/growth` route | ✅ Wired | Returns SkillGaps from DynamoDB |
+
+**Status:** Will work automatically once `runFullFlow.ts` completes — Realism agent records `key_gaps` which feed into SkillGaps table. No code changes needed.
+
+**Steps to verify:**
+1. Run `runFullFlow.ts` successfully (Feature 1 steps above)
+2. Visit `localhost:3000/growth` — should show skill gaps flagged by the Realism agent
+
+---
+
+### FEATURE 4 (P2): Network Agent
+
+**What's built:**
+| Sub-feature | Status | Notes |
+|---|---|---|
+| `NetworkAgent` backend | ✅ Exists | Generates connection suggestions |
+| Frontend `/network` page | ✅ Complete | ConnectionCard, CompanyHeader, UpcomingEvents |
+| `/api/network` route | ⚠️ Partial | Returns `[]` — populated by NetworkAgent Lambda |
+| Network Lambda handler | ❌ Not created | Phase 7 not done |
+
+**Status:** Frontend page exists but shows empty until Lambda runs NetworkAgent and writes suggestions to a backing store.
+
+**What to change:**
+- ❌ After Phase 7 Lambda handlers are done, add network suggestions generation to the debate scan Lambda (or a separate scheduled trigger)
+- The `/api/network` route in `frontend/app/api/network/` needs to read from DynamoDB once data exists
+
+---
+
+### WHAT TO DO RIGHT NOW (Jun 10 deadline order)
+
+| # | Action | Time | Impact |
+|---|--------|------|--------|
+| 1 | **Add `EXA_API_KEY`** to `.env.aws` + `frontend/.env.local` | 2 min | Unblocks Risk agent + Exa test |
+| 2 | **Add `ENCRYPTION_SECRET`** to `frontend/.env.local` | 2 min | Required for Gmail token encryption (auth flow) |
+| 3 | **`npx tsx src/scripts/seedDashboard.ts`** | 1 min | Pushes complete user record to DynamoDB |
+| 4 | **`npx tsx src/scripts/runFullFlow.ts`** | ~5 min | Proves the full pipeline works; fills DynamoDB with real verdicts |
+| 5 | **Start Vercel deploy (Phase 8)** | 30 min | Required for judges to access the app |
+| 6 | **Build Lambda handlers (Phase 7.1–7.3)** | 2–3 hr | Enables autonomous scanning + recalibration for demo |
+| 7 | **Add direct feedback button on job detail** | 1 hr | Makes recalibration loop demonstrable without waiting for emails |
+
+------
+
+for task 2.5 i want to be able see it integrate with frontend, pending frontend onboarding 
+upload via a profile page edit setting too

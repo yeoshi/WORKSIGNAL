@@ -58,7 +58,7 @@ try {
 }
 
 // ── Dynamic imports (run AFTER env is loaded) ─────────────────────────────────
-const { DynamoDBWrapper } = await import('@worksignal/shared');
+const { DynamoDBWrapper, createLogger } = await import('@worksignal/shared');
 const { createOpportunityScanner } = await import('../discovery/opportunityScanner.js');
 const { preFilter } = await import('../preFilter/preFilter.js');
 const { runAndPersistAgentVerdicts } = await import('../debate/verdictPersistence.js');
@@ -98,6 +98,7 @@ const exa: ExaClient = async (query: string) => {
         console.log(`    [Exa] No API key — skipping company research`);
         return [];
     }
+    console.log(`    [Exa] Researching company risks/opportunities for "${query}"… `);
     const res = await fetch('https://api.exa.ai/search', {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json', 'x-api-key': EXA_KEY },
@@ -116,6 +117,46 @@ const RED   = '\x1b[31m';
 const CYAN  = '\x1b[36m';
 const GRAY  = '\x1b[90m';
 const YELLOW = '\x1b[33m';
+const SGT_TIME_ZONE = 'Asia/Singapore';
+
+function formatSgt(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+
+    const parts = new Intl.DateTimeFormat('en-SG', {
+        timeZone: SGT_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+    }).formatToParts(date);
+
+    const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${lookup.year}-${lookup.month}-${lookup.day} ${lookup.hour}:${lookup.minute}:${lookup.second} SGT`;
+}
+
+const scannerLogger = createLogger({
+    sink: (entry) => {
+        const rendered: Record<string, unknown> = {
+            ...entry,
+            timestamp: formatSgt(entry.timestamp),
+        };
+        if (typeof rendered.last_scan_at === 'string') {
+            rendered.last_scan_at = formatSgt(rendered.last_scan_at);
+        }
+        const line = JSON.stringify(rendered);
+        if (entry.level === 'error') {
+            console.error(line);
+        } else if (entry.level === 'warn') {
+            console.warn(line);
+        } else {
+            console.log(line);
+        }
+    },
+});
 
 function divider(title: string) {
     console.log(`\n${BOLD}${'─'.repeat(58)}${RESET}`);
@@ -172,7 +213,7 @@ divider('STEP 1 — MCF SCAN');
 
 // scanIntervalMs: 0 bypasses the daily gate so we can always run on demand.
 // In production, the EventBridge trigger respects the 24h gate natively.
-const scanner = createOpportunityScanner({ scanIntervalMs: 0 });
+const scanner = createOpportunityScanner({ scanIntervalMs: 0, logger: scannerLogger });
 
 console.log('\n  Scanning MyCareersFuture… (this may take a few seconds)');
 const startScan = Date.now();
