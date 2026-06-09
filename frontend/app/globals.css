@@ -1,3 +1,82 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --ws-dark: #0e2731;
+  --ws-teal: #63c6b4;
+  --ws-teal-mid: #1f8390;
+  --ws-teal-deep: #15324c;
+  --ws-ink: #173a47;
+  --ws-paper: #f5f2ec;
+  --ws-line: #e4ddd0;
+  --ws-muted: #8a8475;
+  --ws-card: #ffffff;
+}
+
+@layer base {
+  html {
+    @apply overflow-x-hidden;
+  }
+
+  body {
+    @apply overflow-x-hidden bg-ws-paper font-sans text-ws-ink antialiased;
+  }
+}
+
+@layer components {
+  .ws-section-label {
+    @apply mb-4 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.26em] text-ws-muted;
+  }
+
+  .ws-section-label::after {
+    content: '';
+    @apply h-px flex-1 bg-ws-line;
+  }
+
+  .ws-card {
+    @apply rounded-card border border-ws-line bg-ws-card shadow-card;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(
+      165deg,
+      var(--ws-teal-deep) 0%,
+      var(--ws-teal-mid) 35%,
+      #2a9aaa 60%,
+      var(--ws-teal) 100%
+    );
+  }
+
+  @keyframes float-node {
+    0%,
+    100% {
+      transform: translateY(0) translateX(0);
+      opacity: 0.35;
+    }
+    50% {
+      transform: translateY(-12px) translateX(6px);
+      opacity: 0.65;
+    }
+  }
+
+  .animate-float-node {
+    animation: float-node 6s ease-in-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(99, 198, 180, 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(99, 198, 180, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(99, 198, 180, 0);
+    }
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s ease-out infinite;
+  }
+}

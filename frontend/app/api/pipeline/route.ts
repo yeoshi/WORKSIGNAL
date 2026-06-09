@@ -7,12 +7,10 @@
  */
 
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
-import { DEMO_MODE, demoPipeline } from '../lib/demoData';
+import { DEMO_MODE, DEMO_PIPELINE } from '../lib/demo';
 
 export async function GET() {
-    if (DEMO_MODE) {
-        return Response.json(demoPipeline);
-    }
+    if (DEMO_MODE) return Response.json(DEMO_PIPELINE);
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();

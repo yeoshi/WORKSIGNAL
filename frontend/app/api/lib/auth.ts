@@ -5,7 +5,8 @@
  */
 
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '../auth/authOptions';
+import { DEMO_MODE, DEMO_USER } from './demo';
 
 export interface AuthenticatedUser {
     /** Google OAuth `sub` — the Users table partition key. */
@@ -19,6 +20,8 @@ export interface AuthenticatedUser {
  * valid session exists.
  */
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+    if (DEMO_MODE) return DEMO_USER;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
