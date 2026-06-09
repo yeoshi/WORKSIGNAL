@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../../lib/auth';
+import { DEMO_MODE } from '../../../lib/demo';
 
 export async function POST(
     request: NextRequest,
@@ -15,6 +16,10 @@ export async function POST(
 ) {
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
+
+    if (DEMO_MODE) {
+        return Response.json({ ok: true, result: { status: 'sent' } });
+    }
 
     try {
         const { jobId } = params;

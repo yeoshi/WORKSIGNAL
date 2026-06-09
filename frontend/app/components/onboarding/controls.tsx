@@ -27,7 +27,7 @@ export function Button({
   const base =
     'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50';
   const styles: Record<typeof variant, string> = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    primary: 'bg-ws-teal text-ws-dark hover:bg-ws-teal/90',
     secondary: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
     ghost: 'text-gray-600 hover:text-gray-900',
   };
@@ -99,7 +99,7 @@ export function TextInput({
       onChange={(e) => onChange(e.target.value)}
       className={[
         'w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none',
-        'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100',
+        'focus:border-ws-teal focus:ring-2 focus:ring-ws-teal/20',
         invalid ? 'border-red-400' : 'border-gray-300',
       ].join(' ')}
     />
@@ -141,20 +141,20 @@ export function TagInput({
     <div
       className={[
         'flex w-full flex-wrap items-center gap-2 rounded-lg border border-gray-300 bg-white px-2 py-2',
-        'focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100',
+        'focus-within:border-ws-teal focus-within:ring-2 focus-within:ring-ws-teal/20',
       ].join(' ')}
     >
       {values.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700"
+          className="inline-flex items-center gap-1 rounded-md bg-ws-teal/15 px-2 py-1 text-xs font-medium text-ws-teal-mid"
         >
           {tag}
           <button
             type="button"
             aria-label={`Remove ${tag}`}
             onClick={() => remove(tag)}
-            className="text-indigo-400 hover:text-indigo-700"
+            className="text-ws-teal hover:text-ws-teal-mid"
           >
             ×
           </button>
@@ -202,7 +202,7 @@ export function RadioGroup<T extends string>({
             className={[
               'flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition',
               selected
-                ? 'border-indigo-500 bg-indigo-50'
+                ? 'border-ws-teal bg-ws-teal/10'
                 : 'border-gray-200 bg-white hover:border-gray-300',
             ].join(' ')}
           >
@@ -212,7 +212,7 @@ export function RadioGroup<T extends string>({
               value={opt.value}
               checked={selected}
               onChange={() => onChange(opt.value)}
-              className="mt-1 h-4 w-4 accent-indigo-600"
+              className="mt-1 h-4 w-4 accent-ws-teal"
             />
             <span className="flex flex-col">
               <span className="text-sm font-medium text-gray-900">
@@ -258,7 +258,7 @@ export function CheckboxGroup<T extends string>({
             className={[
               'flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition',
               selected
-                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                ? 'border-ws-teal bg-ws-teal/10 text-ws-teal-mid'
                 : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300',
             ].join(' ')}
           >
@@ -266,7 +266,7 @@ export function CheckboxGroup<T extends string>({
               type="checkbox"
               checked={selected}
               onChange={() => toggle(opt.value)}
-              className="h-4 w-4 accent-indigo-600"
+              className="h-4 w-4 accent-ws-teal"
             />
             {opt.label}
           </label>

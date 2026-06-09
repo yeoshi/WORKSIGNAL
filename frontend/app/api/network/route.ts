@@ -7,8 +7,11 @@
  */
 
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
+import { DEMO_MODE, DEMO_NETWORK } from '../lib/demo';
 
 export async function GET() {
+    if (DEMO_MODE) return Response.json(DEMO_NETWORK);
+
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
 
