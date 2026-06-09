@@ -7,6 +7,9 @@ import { defineConfig } from 'vitest/config';
  * (see individual test files / fast-check `numRuns`).
  */
 export default defineConfig({
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     globals: true,
     environment: 'node',
@@ -17,6 +20,7 @@ export default defineConfig({
       '**/.next/**',
       '**/cdk.out/**',
     ],
+    setupFiles: ['./frontend/vitest.setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

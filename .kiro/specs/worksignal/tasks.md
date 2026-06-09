@@ -379,7 +379,7 @@ Property-based tests use **fast-check**, run a **minimum of 100 iterations**, an
     - Sign in with Google → Upload resume → About you (career stage + residency, career_switcher from/to) → Targets + Non-negotiables, wired to Auth and Onboarding_Service APIs
     - _Requirements: 1.1, 2.1, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1_
 
-  - [~] 21.2 Write component tests for onboarding
+  - [x] 21.2 Write component tests for onboarding
     - Validation messaging for ranking and salary, and career_switcher field requirement
     - _Requirements: 4.4, 5.3, 3.3_
 
@@ -387,7 +387,7 @@ Property-based tests use **fast-check**, run a **minimum of 100 iterations**, an
     - Agent status banner, action-needed cards, pipeline summary, Growth/Network/intelligence cards, and surfaced Filter_Relaxation_Suggestion approval prompts
     - _Requirements: 9.5, 9.6, 9.7, 13.2_
 
-  - [~] 21.4 Write component tests for the dashboard
+  - [x] 21.4 Write component tests for the dashboard
     - Relaxation-suggestion prompt rendering and approve/reject interaction
     - _Requirements: 9.6, 9.7_
 
@@ -396,7 +396,7 @@ Property-based tests use **fast-check**, run a **minimum of 100 iterations**, an
     - Job header (company, role, salary, posting time); one debate card per agent (agent colours, staggered entrance animation) with verdict/score/reasoning/key argument; Master decision summary; customised resume preview; editable cover-letter field; action bar (Send/Skip/Save) wiring edited cover-letter text into Send
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 16.6_
 
-  - [~] 22.2 Write component/snapshot tests for the Job Detail view
+  - [x] 22.2 Write component/snapshot tests for the Job Detail view
     - Debate cards, decision summary, previews, and action bar
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
@@ -405,36 +405,36 @@ Property-based tests use **fast-check**, run a **minimum of 100 iterations**, an
     - Table of Company/Role/Sent/Status with status badges, silent background retry on load failure, and row click opening the original debate
     - _Requirements: 17.1, 17.2, 17.3, 17.4_
 
-  - [~] 23.2 Write component tests for the Pipeline view
+  - [x] 23.2 Write component tests for the Pipeline view
     - Rendering, status badges, and silent background retry
     - _Requirements: 17.1, 17.2_
 
-  - [ ] 23.3 Build the Growth Roadmap view
+  - [x] 23.3 Build the Growth Roadmap view
     - Identified skill gap, four-week plan with linked resources, and projected match-score improvement
     - _Requirements: 19.5_
 
-  - [~] 23.4 Build the Network Suggestions view
+  - [x] 23.4 Build the Network Suggestions view
     - Target company + application count, connection cards (alumni/community/cold), draft outreach messages, and upcoming events
     - _Requirements: 20.5_
 
-  - [~] 23.5 Build the Weekly Brief view
+  - [x] 23.5 Build the Weekly Brief view
     - Applications sent, callbacks, callback rate, per-agent accuracy, and threshold adjustments for the most recent recalibration
     - _Requirements: 21.5_
 
-  - [~] 23.6 Write component tests for the Growth, Network, and Brief views
+  - [x] 23.6 Write component tests for the Growth, Network, and Brief views
     - Rendering of roadmap, suggestion ordering, and brief metrics
     - _Requirements: 19.5, 20.5, 21.5_
 
-- [ ] 24. Final integration and wiring
-  - [~] 24.1 Wire BFF/API routes connecting the frontend to all backend services
+- [x] 24. Final integration and wiring
+  - [x] 24.1 Wire BFF/API routes connecting the frontend to all backend services
     - Authenticated Next.js API routes mapped to the NextAuth session/Google `sub`, fronting onboarding, debate review, send, pipeline, growth, network, and brief operations
     - _Requirements: 1.2, 5.5, 13, 15, 16, 17, 19.5, 20.5, 21.5_
 
-  - [~] 24.2 Write end-to-end integration tests for key flows
+  - [x] 24.2 Write end-to-end integration tests for key flows
     - Onboarding → scan/debate → review → send → reply classification → recalibration against mocked external services
     - _Requirements: 7, 10, 13, 16, 18, 21_
 
-- [~] 25. Final checkpoint - Ensure all tests pass
+- [x] 25. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

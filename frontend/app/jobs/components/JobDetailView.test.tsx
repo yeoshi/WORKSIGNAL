@@ -1,0 +1,630 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { JobHeader } from './JobHeader';
+import { DebateCard } from './DebateCard';
+import { DebateCardList } from './DebateCardList';
+import { DecisionSummary } from './DecisionSummary';
+import { ResumePreview } from './ResumePreview';
+import { CoverLetterEditor } from './CoverLetterEditor';
+import { ActionBar } from './ActionBar';
+import type { Job, VerdictSet, MasterDecision, Materials } from '@worksignal/shared';
+import type { AgentCardData } from './agentTheme';
+
+// ---------------------------------------------------------------------------
+// Test fixtures
+// ---------------------------------------------------------------------------
+
+function makeJob(overrides: Partial<Job> = {}): Job {
+    return {
+        job_id: 'job-001',
+        user_id: 'user-001',
+        company: 'TechCorp Singapore',
+        role_title: 'Senior Frontend Engineer',
+        salary_min: 8000,
+        salary_max: 12000,
+        jd_text: 'We are looking for a senior frontend engineer...',
+        posted_at: '2024-06-01T00:00:00.000Z',
+        source_url: 'https://example.com/job/001',
+        employer_email: 'hiring@techcorp.sg',
+        employment_type: 'full_time',
+        work_arrangement: 'hybrid_remote',
+        location: 'Singapore',
+        ep_sponsorship_signal: false,
+        mcf_listing_days: 7,
+        scanned_at: '2024-06-10T00:00:00.000Z',
+        ...overrides,
+    };
+}
+
+function makeVerdictSet(): VerdictSet {
+    return {
+        ambition: {
+            verdict: 'apply',
+            ambition_score: 85,
+            reasoning: 'Strong career-ceiling lift with leadership scope.',
+            key_argument: 'Role offers cross-functional leadership exposure.',
+        },
+        realism: {
+            verdict: 'apply',
+            match_score: 78,
+            key_gaps: ['System design at scale'],
+            work_life_flags: [],
+            reasoning: 'Good match with minor skill gap.',
+            key_argument: 'Transferable experience covers 80% of requirements.',
+        },
+        risk: {
+            verdict: 'safe',
+            risk_score: 25,
+            red_flags: [{ flag: 'Recent layoffs', source: 'TechCrunch', severity: 'low' }],
+            glassdoor_score: 4.2,
+            reasoning: 'Company is stable with strong fundamentals.',
+            key_argument: 'Well-funded with growing revenue.',
+        },
+        opportunity: {
+            verdict: 'act_now',
+            urgency_score: 90,
+            timing_factors: ['Role posted 3 days ago', 'Few applicants'],
+            reasoning: 'High urgency — early mover advantage.',
+            key_argument: 'Listing is fresh with low competition.',
+        },
+    };
+}
+
+function makeDecision(overrides: Partial<MasterDecision> = {}): MasterDecision {
+    return {
+        decision: 'apply_consensus',
+        summary: 'All agents recommend applying. Strong alignment with your career goals.',
+        resume_instructions: 'Emphasise leadership and system design experience.',
+        cover_letter_angle: 'Focus on cross-functional collaboration wins.',
+        agents_for: ['ambition', 'realism', 'risk', 'opportunity'],
+        agents_against: [],
+        user_action_required: false,
+        ...overrides,
+    };
+}
+
+function makeMaterials(overrides: Partial<Materials> = {}): Materials {
+    return {
+        resume_s3_key: 'resumes/user-001/job-001-customised.pdf',
+        cover_letter_text: 'Dear Hiring Manager, I am excited to apply...',
+        customisation_applied: true,
+        ...overrides,
+    };
+}
+
+// ---------------------------------------------------------------------------
+// Req 15.1: JobHeader — company, role, salary, posting time
+// ---------------------------------------------------------------------------
+
+describe('JobHeader (Req 15.1)', () => {
+    it('renders the company name', () => {
+        render(<JobHeader job={makeJob()} />);
+        expect(screen.getByText('TechCorp Singapore')).toBeDefined();
+    });
+
+    it('renders the role title', () => {
+        render(<JobHeader job={makeJob()} />);
+        expect(screen.getByText('Senior Frontend Engineer')).toBeDefined();
+    });
+
+    it('renders the formatted salary range', () => {
+        render(<JobHeader job={makeJob({ salary_min: 8000, salary_max: 12000 })} />);
+        const salaryEl = screen.getByTestId('job-salary');
+        // Intl.NumberFormat renders with narrow currency symbol in jsdom
+        expect(salaryEl.textContent).toContain('8,000');
+        expect(salaryEl.textContent).toContain('12,000');
+        expect(salaryEl.textContent).toContain('/ month');
+    });
+
+    it('renders posting time', () => {
+        render(<JobHeader job={makeJob()} />);
+        const postingEl = screen.getByTestId('job-posting-time');
+        expect(postingEl.textContent).toContain('Posted');
+    });
+
+    it('renders "Salary not disclosed" when both min and max are 0', () => {
+        render(<JobHeader job={makeJob({ salary_min: 0, salary_max: 0 })} />);
+        const salaryEl = screen.getByTestId('job-salary');
+        expect(salaryEl.textContent).toBe('Salary not disclosed');
+    });
+
+    it('renders the location when available', () => {
+        render(<JobHeader job={makeJob({ location: 'Singapore CBD' })} />);
+        expect(screen.getByText('Singapore CBD')).toBeDefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Req 15.2: DebateCard — verdict, score, reasoning, key argument
+// ---------------------------------------------------------------------------
+
+describe('DebateCard (Req 15.2)', () => {
+    const card: AgentCardData = {
+        agent: 'ambition',
+        label: 'Ambition',
+        color: '#DC2626',
+        verdict: 'apply',
+        score: 85,
+        scoreLabel: 'Ambition score',
+        reasoning: 'Strong career-ceiling lift with leadership scope.',
+        keyArgument: 'Role offers cross-functional leadership exposure.',
+        details: [],
+        failed: false,
+    };
+
+    it('renders the agent label', () => {
+        render(<DebateCard card={card} />);
+        expect(screen.getByText('Ambition')).toBeDefined();
+    });
+
+    it('renders the verdict badge', () => {
+        render(<DebateCard card={card} />);
+        const verdict = screen.getByTestId('debate-card-ambition-verdict');
+        expect(verdict.textContent).toBe('Apply');
+    });
+
+    it('renders the score with /100', () => {
+        render(<DebateCard card={card} />);
+        const scoreEl = screen.getByTestId('debate-card-ambition-score');
+        expect(scoreEl.textContent).toContain('85/100');
+    });
+
+    it('renders the reasoning text', () => {
+        render(<DebateCard card={card} />);
+        const reasoning = screen.getByTestId('debate-card-ambition-reasoning');
+        expect(reasoning.textContent).toBe('Strong career-ceiling lift with leadership scope.');
+    });
+
+    it('renders the key argument', () => {
+        render(<DebateCard card={card} />);
+        const keyArg = screen.getByTestId('debate-card-ambition-key-argument');
+        expect(keyArg.textContent).toBe('Role offers cross-functional leadership exposure.');
+    });
+
+    it('does not render score section when failed is true', () => {
+        const failedCard: AgentCardData = { ...card, failed: true };
+        render(<DebateCard card={failedCard} />);
+        expect(screen.queryByTestId('debate-card-ambition-score')).toBeNull();
+    });
+
+    it('renders details when present', () => {
+        const cardWithDetails: AgentCardData = {
+            ...card,
+            agent: 'risk',
+            details: [{ label: 'Red flags', values: ['Recent layoffs (TechCrunch)'] }],
+        };
+        render(<DebateCard card={cardWithDetails} />);
+        expect(screen.getByText('Red flags')).toBeDefined();
+        expect(screen.getByText('Recent layoffs (TechCrunch)')).toBeDefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Req 15.2: DebateCardList — renders 4 cards (one per agent)
+// ---------------------------------------------------------------------------
+
+describe('DebateCardList (Req 15.2)', () => {
+    it('renders exactly 4 debate cards', () => {
+        render(<DebateCardList verdicts={makeVerdictSet()} />);
+        const list = screen.getByTestId('debate-card-list');
+        expect(list).toBeDefined();
+
+        expect(screen.getByTestId('debate-card-ambition')).toBeDefined();
+        expect(screen.getByTestId('debate-card-realism')).toBeDefined();
+        expect(screen.getByTestId('debate-card-risk')).toBeDefined();
+        expect(screen.getByTestId('debate-card-opportunity')).toBeDefined();
+    });
+
+    it('renders each card with its verdict', () => {
+        render(<DebateCardList verdicts={makeVerdictSet()} />);
+        expect(screen.getByTestId('debate-card-ambition-verdict').textContent).toBe('Apply');
+        expect(screen.getByTestId('debate-card-realism-verdict').textContent).toBe('Apply');
+        expect(screen.getByTestId('debate-card-risk-verdict').textContent).toBe('Safe');
+        expect(screen.getByTestId('debate-card-opportunity-verdict').textContent).toBe('Act Now');
+    });
+
+    it('renders each card with its score', () => {
+        render(<DebateCardList verdicts={makeVerdictSet()} />);
+        expect(screen.getByTestId('debate-card-ambition-score').textContent).toContain('85/100');
+        expect(screen.getByTestId('debate-card-realism-score').textContent).toContain('78/100');
+        expect(screen.getByTestId('debate-card-risk-score').textContent).toContain('25/100');
+        expect(screen.getByTestId('debate-card-opportunity-score').textContent).toContain('90/100');
+    });
+
+    it('renders each card with reasoning', () => {
+        render(<DebateCardList verdicts={makeVerdictSet()} />);
+        expect(screen.getByTestId('debate-card-ambition-reasoning').textContent).toContain(
+            'Strong career-ceiling lift'
+        );
+        expect(screen.getByTestId('debate-card-opportunity-reasoning').textContent).toContain(
+            'High urgency'
+        );
+    });
+
+    it('renders each card with a key argument', () => {
+        render(<DebateCardList verdicts={makeVerdictSet()} />);
+        expect(screen.getByTestId('debate-card-ambition-key-argument').textContent).toContain(
+            'cross-functional leadership'
+        );
+        expect(screen.getByTestId('debate-card-opportunity-key-argument').textContent).toContain(
+            'fresh with low competition'
+        );
+    });
+
+    it('handles partially missing verdicts (degraded mode)', () => {
+        const partial: VerdictSet = {
+            ambition: makeVerdictSet().ambition,
+            realism: makeVerdictSet().realism,
+            // risk and opportunity missing
+        };
+        render(<DebateCardList verdicts={partial} />);
+        // Should still render 4 cards (2 with data, 2 failed)
+        expect(screen.getByTestId('debate-card-ambition')).toBeDefined();
+        expect(screen.getByTestId('debate-card-realism')).toBeDefined();
+        expect(screen.getByTestId('debate-card-risk')).toBeDefined();
+        expect(screen.getByTestId('debate-card-opportunity')).toBeDefined();
+
+        // Failed cards show 'unavailable' verdict
+        expect(screen.getByTestId('debate-card-risk-verdict').textContent).toBe('Unavailable');
+        expect(screen.getByTestId('debate-card-opportunity-verdict').textContent).toBe('Unavailable');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Req 15.3: DecisionSummary — Master Orchestrator decision
+// ---------------------------------------------------------------------------
+
+describe('DecisionSummary (Req 15.3)', () => {
+    it('renders the decision badge', () => {
+        render(<DecisionSummary decision={makeDecision()} />);
+        const badge = screen.getByTestId('decision-badge');
+        expect(badge.textContent).toBe('Apply — consensus');
+    });
+
+    it('renders the decision summary text', () => {
+        render(<DecisionSummary decision={makeDecision()} />);
+        const text = screen.getByTestId('decision-text');
+        expect(text.textContent).toContain('All agents recommend applying');
+    });
+
+    it('renders supporting agents', () => {
+        render(<DecisionSummary decision={makeDecision()} />);
+        const forSection = screen.getByTestId('agents-for');
+        expect(forSection.textContent).toContain('Ambition');
+        expect(forSection.textContent).toContain('Realism');
+        expect(forSection.textContent).toContain('Risk');
+        expect(forSection.textContent).toContain('Opportunity');
+    });
+
+    it('renders opposing agents when present', () => {
+        render(
+            <DecisionSummary
+                decision={makeDecision({
+                    decision: 'apply_with_caveat',
+                    agents_for: ['ambition', 'realism', 'opportunity'],
+                    agents_against: ['risk'],
+                    dissent_note: 'Risk agent flagged recent layoffs.',
+                })}
+            />
+        );
+        const againstSection = screen.getByTestId('agents-against');
+        expect(againstSection.textContent).toContain('Risk');
+    });
+
+    it('renders dissent note when present', () => {
+        render(
+            <DecisionSummary
+                decision={makeDecision({
+                    dissent_note: 'Risk agent flagged recent layoffs.',
+                })}
+            />
+        );
+        const dissent = screen.getByTestId('dissent-note');
+        expect(dissent.textContent).toContain('Risk agent flagged recent layoffs.');
+    });
+
+    it('shows user action required banner when user_action_required is true', () => {
+        render(
+            <DecisionSummary decision={makeDecision({ user_action_required: true })} />
+        );
+        const banner = screen.getByTestId('decision-action-required');
+        expect(banner.textContent).toContain('explicit confirmation is required');
+    });
+
+    it('does not show user action required banner when false', () => {
+        render(
+            <DecisionSummary decision={makeDecision({ user_action_required: false })} />
+        );
+        expect(screen.queryByTestId('decision-action-required')).toBeNull();
+    });
+
+    it('renders agent failures when present', () => {
+        render(
+            <DecisionSummary
+                decision={makeDecision({ agent_failures: ['risk', 'opportunity'] })}
+            />
+        );
+        const failures = screen.getByTestId('agent-failures');
+        expect(failures.textContent).toContain('Risk');
+        expect(failures.textContent).toContain('Opportunity');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Req 15.4: ResumePreview and CoverLetterEditor
+// ---------------------------------------------------------------------------
+
+describe('ResumePreview (Req 15.4)', () => {
+    it('renders the resume preview section', () => {
+        render(
+            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+        );
+        expect(screen.getByTestId('resume-preview')).toBeDefined();
+        expect(screen.getByText('Customised resume')).toBeDefined();
+    });
+
+    it('renders resume instructions from the Master decision', () => {
+        render(
+            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+        );
+        const instructions = screen.getByTestId('resume-instructions');
+        expect(instructions.textContent).toContain('Emphasise leadership');
+    });
+
+    it('renders a link when resumeUrl is provided', () => {
+        render(
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeUrl="https://s3.example.com/resume.pdf"
+            />
+        );
+        const link = screen.getByTestId('resume-link');
+        expect(link.getAttribute('href')).toBe('https://s3.example.com/resume.pdf');
+        expect(link.textContent).toContain('View resume PDF');
+    });
+
+    it('shows S3 key fallback when no resumeUrl', () => {
+        render(
+            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+        );
+        const pending = screen.getByTestId('resume-pending');
+        expect(pending.textContent).toContain('resumes/user-001/job-001-customised.pdf');
+    });
+
+    it('shows base resume fallback badge when customisation_applied is false', () => {
+        render(
+            <ResumePreview
+                materials={makeMaterials({ customisation_applied: false })}
+                decision={makeDecision()}
+            />
+        );
+        const badge = screen.getByTestId('resume-base-fallback');
+        expect(badge.textContent).toContain('Base resume');
+    });
+});
+
+describe('CoverLetterEditor (Req 15.4)', () => {
+    it('renders the cover letter editor section', () => {
+        render(
+            <CoverLetterEditor
+                value="Dear Hiring Manager..."
+                onChange={() => { }}
+                decision={makeDecision()}
+            />
+        );
+        expect(screen.getByTestId('cover-letter-editor')).toBeDefined();
+        expect(screen.getByText('Cover letter')).toBeDefined();
+    });
+
+    it('renders the textarea with the provided value', () => {
+        render(
+            <CoverLetterEditor
+                value="My cover letter text"
+                onChange={() => { }}
+                decision={makeDecision()}
+            />
+        );
+        const textarea = screen.getByTestId('cover-letter-textarea') as HTMLTextAreaElement;
+        expect(textarea.value).toBe('My cover letter text');
+    });
+
+    it('calls onChange when the textarea is edited', () => {
+        const onChange = vi.fn();
+        render(
+            <CoverLetterEditor
+                value="Initial"
+                onChange={onChange}
+                decision={makeDecision()}
+            />
+        );
+        const textarea = screen.getByTestId('cover-letter-textarea');
+        fireEvent.change(textarea, { target: { value: 'Updated text' } });
+        expect(onChange).toHaveBeenCalledWith('Updated text');
+    });
+
+    it('renders the suggested cover letter angle from the decision', () => {
+        render(
+            <CoverLetterEditor
+                value=""
+                onChange={() => { }}
+                decision={makeDecision()}
+            />
+        );
+        const angle = screen.getByTestId('cover-letter-angle');
+        expect(angle.textContent).toContain('cross-functional collaboration');
+    });
+
+    it('disables textarea when disabled prop is true', () => {
+        render(
+            <CoverLetterEditor
+                value="text"
+                onChange={() => { }}
+                decision={makeDecision()}
+                disabled={true}
+            />
+        );
+        const textarea = screen.getByTestId('cover-letter-textarea') as HTMLTextAreaElement;
+        expect(textarea.disabled).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Req 15.5: ActionBar — Send, Skip, Save actions
+// ---------------------------------------------------------------------------
+
+describe('ActionBar (Req 15.5)', () => {
+    it('renders the action bar', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        expect(screen.getByTestId('action-bar')).toBeDefined();
+    });
+
+    it('renders Send button when employer email exists', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        const sendBtn = screen.getByTestId('action-send');
+        expect(sendBtn.textContent).toContain('Send application');
+    });
+
+    it('renders Save button', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        const saveBtn = screen.getByTestId('action-save');
+        expect(saveBtn.textContent).toContain('Save');
+    });
+
+    it('renders Skip button', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        const skipBtn = screen.getByTestId('action-skip');
+        expect(skipBtn.textContent).toContain('Skip');
+    });
+
+    it('calls onSend when Send button is clicked', () => {
+        const onSend = vi.fn();
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={onSend}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        fireEvent.click(screen.getByTestId('action-send'));
+        expect(onSend).toHaveBeenCalledOnce();
+    });
+
+    it('calls onSkip when Skip button is clicked', () => {
+        const onSkip = vi.fn();
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={onSkip}
+                onSave={() => { }}
+            />
+        );
+        fireEvent.click(screen.getByTestId('action-skip'));
+        expect(onSkip).toHaveBeenCalledOnce();
+    });
+
+    it('calls onSave when Save button is clicked', () => {
+        const onSave = vi.fn();
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={onSave}
+            />
+        );
+        fireEvent.click(screen.getByTestId('action-save'));
+        expect(onSave).toHaveBeenCalledOnce();
+    });
+
+    it('renders redirect link instead of Send when no employer email', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={false}
+                sourceUrl="https://employer.com/apply"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        expect(screen.queryByTestId('action-send')).toBeNull();
+        const redirect = screen.getByTestId('action-redirect');
+        expect(redirect.getAttribute('href')).toBe('https://employer.com/apply');
+        expect(redirect.textContent).toContain('Apply on employer site');
+    });
+
+    it('shows redirect note when no employer email', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={false}
+                sourceUrl="https://employer.com/apply"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+            />
+        );
+        const note = screen.getByTestId('redirect-note');
+        expect(note.textContent).toContain('No employer email found');
+    });
+
+    it('disables buttons when busy', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+                busy={true}
+            />
+        );
+        const sendBtn = screen.getByTestId('action-send') as HTMLButtonElement;
+        const saveBtn = screen.getByTestId('action-save') as HTMLButtonElement;
+        const skipBtn = screen.getByTestId('action-skip') as HTMLButtonElement;
+        expect(sendBtn.disabled).toBe(true);
+        expect(saveBtn.disabled).toBe(true);
+        expect(skipBtn.disabled).toBe(true);
+    });
+});
