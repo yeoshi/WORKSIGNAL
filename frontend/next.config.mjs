@@ -29,6 +29,7 @@ const nextConfig = {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         crypto: false,
+        'node:crypto': false,
         buffer: false,
         stream: false,
         util: false,

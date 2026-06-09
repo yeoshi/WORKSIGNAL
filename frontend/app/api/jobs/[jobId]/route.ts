@@ -14,7 +14,12 @@ export async function GET(
     _request: NextRequest,
     { params }: { params: { jobId: string } },
 ) {
-    if (DEMO_MODE) return Response.json({ ...DEMO_JOB_DETAIL, job: { ...DEMO_JOB_DETAIL.job, job_id: params.jobId } });
+    if (DEMO_MODE) {
+        return Response.json({
+            ...DEMO_JOB_DETAIL,
+            job: { ...DEMO_JOB_DETAIL.job, job_id: params.jobId },
+        });
+    }
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
