@@ -25,8 +25,8 @@ import {
   type UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 
-/** Default region for all WORKSIGNAL infrastructure (design: AWS ap-southeast-1). */
-const DEFAULT_REGION = 'ap-southeast-1';
+/** Default region — reads from AWS_DEFAULT_REGION env var, falls back to us-west-2. */
+const DEFAULT_REGION = process.env.AWS_DEFAULT_REGION ?? 'us-west-2';
 
 /** Minimal structural type the wrapper needs; satisfied by DynamoDBDocumentClient. */
 export interface DocumentClientLike {

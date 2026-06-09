@@ -19,8 +19,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-/** Default region for all WORKSIGNAL infrastructure (design: AWS ap-southeast-1). */
-const DEFAULT_REGION = 'ap-southeast-1';
+/** Default region — reads from AWS_DEFAULT_REGION env var, falls back to us-west-2. */
+const DEFAULT_REGION = process.env.AWS_DEFAULT_REGION ?? 'us-west-2';
 
 /** Default pre-signed URL lifetime: 15 minutes. */
 const DEFAULT_EXPIRY_SECONDS = 900;

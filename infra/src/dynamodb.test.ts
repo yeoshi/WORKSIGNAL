@@ -21,8 +21,8 @@ function allKeyAttributeNames(table: TableDefinition): string[] {
 }
 
 describe('DynamoDB table infrastructure', () => {
-  it('targets ap-southeast-1', () => {
-    expect(DYNAMODB_REGION).toBe('ap-southeast-1');
+  it('targets the configured AWS region', () => {
+    expect(DYNAMODB_REGION).toBe(process.env.AWS_DEFAULT_REGION ?? 'us-west-2');
   });
 
   it('defines exactly the six design tables', () => {
