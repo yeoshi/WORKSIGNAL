@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { useState } from 'react';
 import { Logo } from '../ui/Logo';
@@ -18,23 +17,7 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 border-b border-ws-line bg-ws-card/95 backdrop-blur-md">
       <div className="mx-auto flex min-w-0 max-w-[1600px] items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
-          <Logo href="/dashboard" size="sm" />
-          <nav className="hidden items-center gap-1 sm:flex">
-            <Link
-              href="/dashboard"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-ws-ink transition hover:bg-ws-paper"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/brief"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-ws-muted transition hover:bg-ws-paper hover:text-ws-ink"
-            >
-              Weekly Brief
-            </Link>
-          </nav>
-        </div>
+        <Logo href="/dashboard" size="sm" />
 
         <div className="relative ml-auto">
           <button
@@ -55,20 +38,6 @@ export function TopBar() {
                 onClick={() => setMenuOpen(false)}
               />
               <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-ws-line bg-ws-card py-1 shadow-card">
-                <Link
-                  href="/dashboard"
-                  className="block px-4 py-2 text-sm text-ws-ink hover:bg-ws-paper sm:hidden"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/brief"
-                  className="block px-4 py-2 text-sm text-ws-ink hover:bg-ws-paper sm:hidden"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Weekly Brief
-                </Link>
                 <button
                   type="button"
                   className="block w-full px-4 py-2 text-left text-sm text-ws-ink hover:bg-ws-paper"

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardHeader } from './components/DashboardHeader';
 import { InsightRail } from './components/InsightCards';
 import { PipelineKanban } from './components/PipelineKanban';
@@ -19,6 +20,7 @@ import {
 } from './lib/buildDashboardIssues';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { data, state, removeActionNeeded, approveSuggestion, rejectSuggestion, reload } =
     useDashboardData();
   const {
@@ -64,6 +66,22 @@ export default function DashboardPage() {
     setSelectedJobShowActions(false);
   };
 
+  const handleModalSkip = useCallback(
+    async (jobId: string) => {
+      await skip(jobId);
+      handleCloseJob();
+    },
+    [skip],
+  );
+
+  const handleModalSend = useCallback(
+    async (jobId: string, coverLetter: string) => {
+      await send(jobId, coverLetter);
+      handleCloseJob();
+    },
+    [send],
+  );
+
   return (
     <main className="mx-auto min-w-0 max-w-[1600px] space-y-5 overflow-x-hidden p-4 sm:space-y-6 sm:p-6 lg:px-8">
       {state === 'loading' && (
@@ -99,24 +117,28 @@ export default function DashboardPage() {
                   bordered
                   label="Total"
                   value={data.pipeline.total}
-                  subtext="applications"
+                  secondarySubtext="applications"
                 />
                 <Metric
                   bordered
                   label="Callbacks"
                   value={callbacks}
-                  subtext="this cycle"
                 />
                 <Metric
                   bordered
-                  label="Rate"
+                  label="Callback Rate"
                   value={
                     callbackRate === null
                       ? '—'
                       : `${Math.round(callbackRate * 100)}%`
                   }
-                  highlight={
-                    callbackRate != null && callbackRate >= 0.15
+                  valueClassName={
+                    callbackRate != null && callbackRate > 0.08
+                      ? 'text-emerald-600'
+                      : undefined
+                  }
+                  secondarySubtext={
+                    callbackRate != null ? 'vs. 8% SG avg' : undefined
                   }
                 />
               </div>
@@ -146,8 +168,21 @@ export default function DashboardPage() {
         </>
       )}
 
-      <GrowthModal open={growthOpen} onClose={() => setGrowthOpen(false)} />
-      <NetworkModal open={networkOpen} onClose={() => setNetworkOpen(false)} />
+      <GrowthModal
+        open={growthOpen}
+        onClose={() => setGrowthOpen(false)}
+        skills={data?.growth ?? []}
+      />
+      <NetworkModal
+        open={networkOpen}
+        onClose={() => setNetworkOpen(false)}
+        companies={data?.network ?? []}
+        onViewPipeline={(company) => {
+          router.push(
+            `/dashboard?company=${encodeURIComponent(company)}#pipeline`,
+          );
+        }}
+      />
       <BriefModal open={briefOpen} onClose={() => setBriefOpen(false)} />
       <IssuesModal
         open={issuesOpen}
@@ -161,6 +196,8 @@ export default function DashboardPage() {
         jobId={selectedJobId}
         showActions={selectedJobShowActions}
         onClose={handleCloseJob}
+        onSkipJob={selectedJobShowActions ? handleModalSkip : undefined}
+        onSendJob={selectedJobShowActions ? handleModalSend : undefined}
       />
     </main>
   );

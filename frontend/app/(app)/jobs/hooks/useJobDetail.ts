@@ -12,6 +12,8 @@ export type JobDetailLoadState =
       status: 'ready';
       data: NonNullable<ReturnType<typeof normalizeJobDetail>>;
       resumeUrl: string | null;
+      baseResumeUrl: string | null;
+      baseResumeS3Key: string | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,7 +49,19 @@ export function useJobDetail(jobId: string | null, enabled = true) {
           isRecord(raw) && typeof raw.resumeUrl === 'string'
             ? raw.resumeUrl
             : null;
-        if (!cancelled) setState({ status: 'ready', data, resumeUrl });
+        const baseResumeUrl =
+          isRecord(raw) && typeof raw.baseResumeUrl === 'string'
+            ? raw.baseResumeUrl
+            : null;
+        const baseResumeS3Key =
+          isRecord(raw) && typeof raw.baseResumeS3Key === 'string'
+            ? raw.baseResumeS3Key
+            : isRecord(raw) && typeof raw.base_resume_s3_key === 'string'
+              ? raw.base_resume_s3_key
+              : null;
+        if (!cancelled) {
+          setState({ status: 'ready', data, resumeUrl, baseResumeUrl, baseResumeS3Key });
+        }
       } catch (err) {
         if (!cancelled) {
           setState({

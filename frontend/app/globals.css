@@ -24,6 +24,17 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
   .ws-section-label {
     @apply mb-4 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.26em] text-ws-muted;
@@ -78,5 +89,21 @@
 
   .animate-pulse-ring {
     animation: pulse-ring 2s ease-out infinite;
+  }
+
+  @keyframes network-arrow-pulse-once {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+    }
+  }
+
+  .animate-network-arrow-pulse-once {
+    animation: network-arrow-pulse-once 0.6s ease-in-out 1;
   }
 }

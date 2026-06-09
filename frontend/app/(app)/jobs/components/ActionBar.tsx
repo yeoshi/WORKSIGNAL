@@ -1,17 +1,17 @@
 import type { JobDetailAction } from './jobDetailTypes';
 
 export interface ActionBarProps {
-  /** Whether an employer contact email exists for this job (Req 16.1/16.6). */
   hasEmployerEmail: boolean;
-  /** The job's source URL, used for the redirect affordance (Req 16.6). */
   sourceUrl: string;
   onSend: () => void;
   onSkip: () => void;
   onSave: () => void;
-  /** Disables actions while one is in flight. */
   busy?: boolean;
-  /** The action currently in flight, for per-button feedback. */
   pendingAction?: JobDetailAction | null;
+  /** Flat layout for modal footers (no floating card chrome). */
+  embedded?: boolean;
+  /** When false, hides Save (Needs Decision flow: send or skip only). */
+  showSave?: boolean;
 }
 
 /**
@@ -27,6 +27,8 @@ export function ActionBar({
   onSave,
   busy = false,
   pendingAction = null,
+  embedded = false,
+  showSave = true,
 }: ActionBarProps) {
   const label = (action: JobDetailAction, fallback: string) =>
     pendingAction === action ? `${fallback}…` : fallback;
@@ -36,7 +38,12 @@ export function ActionBar({
       data-testid="action-bar"
       role="group"
       aria-label="Application actions"
-      className="sticky bottom-4 flex w-full min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg sm:gap-3 sm:p-4"
+      className={[
+        'flex w-full min-w-0 flex-wrap items-center gap-2 sm:gap-3',
+        embedded
+          ? 'p-0'
+          : 'sticky bottom-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg sm:p-4',
+      ].join(' ')}
     >
       {hasEmployerEmail ? (
         <button
@@ -60,15 +67,17 @@ export function ActionBar({
         </a>
       )}
 
-      <button
-        type="button"
-        data-testid="action-save"
-        onClick={onSave}
-        disabled={busy}
-        className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
-      >
-        {label('save', 'Save')}
-      </button>
+      {showSave ? (
+        <button
+          type="button"
+          data-testid="action-save"
+          onClick={onSave}
+          disabled={busy}
+          className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {label('save', 'Save')}
+        </button>
+      ) : null}
 
       <button
         type="button"

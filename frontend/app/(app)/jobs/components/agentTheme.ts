@@ -23,10 +23,10 @@ export interface AgentTheme {
 }
 
 export const AGENT_THEME: Record<AgentName, AgentTheme> = {
-  ambition: { label: 'Ambition', color: '#DC2626' },
-  realism: { label: 'Realism', color: '#2563EB' },
-  risk: { label: 'Risk', color: '#D97706' },
-  opportunity: { label: 'Opportunity', color: '#059669' },
+  ambition: { label: 'Ambition Agent', color: '#DC2626' },
+  realism: { label: 'Realism Agent', color: '#2563EB' },
+  risk: { label: 'Risk Agent', color: '#D97706' },
+  opportunity: { label: 'Opportunity Agent', color: '#059669' },
 };
 
 /** A list of related verdict detail values rendered under the reasoning. */

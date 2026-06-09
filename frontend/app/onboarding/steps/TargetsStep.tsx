@@ -70,6 +70,7 @@ export function TargetsStep({
     ranking?: string;
     salary?: string;
     employment?: string;
+    submit?: string;
   }>({});
   const [busy, setBusy] = useState(false);
 
@@ -110,8 +111,17 @@ export function TargetsStep({
     };
 
     setBusy(true);
-    await saveTargets(payload);
+    const result = await saveTargets(payload);
     setBusy(false);
+
+    if (!result.ok) {
+      setErrors((e) => ({
+        ...e,
+        submit: result.message,
+      }));
+      return;
+    }
+
     onComplete(payload);
   }
 
@@ -221,6 +231,12 @@ export function TargetsStep({
           placeholder="e.g. No commission-only roles"
         />
       </Field>
+
+      {errors.submit && (
+        <p role="alert" className="text-sm font-medium text-red-600">
+          {errors.submit}
+        </p>
+      )}
 
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={onBack}>

@@ -20,6 +20,7 @@ import type {
   PriorityFactor,
   ResidencyStatus,
 } from '@worksignal/shared';
+import type { OnboardingRecord } from './lib/onboardingStatus';
 
 /** Result of an onboarding API call that tolerates the route being absent. */
 export type ApiResult<T = undefined> =
@@ -127,3 +128,26 @@ export interface TargetsPayload {
 export async function saveTargets(payload: TargetsPayload): Promise<ApiResult> {
   return postJson('/api/onboarding/targets', payload);
 }
+
+/** Fetch the current onboarding state for the authenticated user. */
+export async function fetchOnboardingState(): Promise<OnboardingRecord | null> {
+  try {
+    const res = await fetch('/api/onboarding', {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (res.status === 204 || res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      return null;
+    }
+
+    return (await res.json()) as OnboardingRecord;
+  } catch {
+    return null;
+  }
+}
+
+export type { OnboardingRecord };

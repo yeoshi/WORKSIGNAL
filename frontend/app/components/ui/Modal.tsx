@@ -5,9 +5,14 @@ import { useEffect, type ReactNode } from 'react';
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
-  title?: string;
+  title?: ReactNode;
+  /** Optional action rendered beside the close control in the header. */
+  titleAction?: ReactNode;
   children: ReactNode;
   size?: 'md' | 'lg' | 'xl';
+  /** When false, children manage their own scroll regions (e.g. sticky footers). */
+  scrollBody?: boolean;
+  footer?: ReactNode;
 }
 
 const sizeClasses = {
@@ -20,8 +25,11 @@ export function Modal({
   open,
   onClose,
   title,
+  titleAction,
   children,
   size = 'lg',
+  scrollBody = true,
+  footer,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -43,7 +51,7 @@ export function Modal({
       className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={typeof title === 'string' ? title : undefined}
     >
       <button
         type="button"
@@ -57,17 +65,25 @@ export function Modal({
           sizeClasses[size],
         ].join(' ')}
       >
-        {title && (
+        {title ? (
           <div className="flex items-center justify-between border-b border-ws-line px-5 py-4 sm:px-6">
-            <h2 className="font-wordmark text-xl font-semibold text-ws-ink">
-              {title}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg p-2 text-ws-muted transition hover:bg-ws-paper hover:text-ws-ink"
-              aria-label="Close"
-            >
+            <div className="min-w-0 flex-1 pr-4">
+              {typeof title === 'string' ? (
+                <h2 className="font-wordmark text-xl font-semibold text-ws-ink">
+                  {title}
+                </h2>
+              ) : (
+                title
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {titleAction}
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg p-2 text-ws-muted transition hover:bg-ws-paper hover:text-ws-ink"
+                aria-label="Close"
+              >
               <svg
                 className="h-5 w-5"
                 fill="none"
@@ -81,12 +97,26 @@ export function Modal({
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-            </button>
+              </button>
+            </div>
           </div>
-        )}
-        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-          {children}
+        ) : null}
+        <div
+          className={[
+            scrollBody ? 'flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6' : 'flex min-h-0 flex-1 flex-col',
+          ].join(' ')}
+        >
+          {scrollBody ? (
+            children
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          )}
         </div>
+        {footer ? (
+          <div className="shrink-0 border-t border-ws-line bg-ws-card px-5 py-4 sm:px-6">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );

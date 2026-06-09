@@ -37,3 +37,21 @@ export function formatLongDate(value: string | null | undefined): string {
   if (!date) return value;
   return LONG_DATE.format(date);
 }
+
+/** e.g. week start "2026-06-02" → "Jun 2 – Jun 8, 2026" (Mon–Sun). */
+export function formatWeekRange(weekOf: string | null | undefined): string {
+  if (!weekOf) return '—';
+  const start = parseDate(weekOf);
+  if (!start) return weekOf;
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+
+  const startLabel = SHORT_DATE.format(start);
+  const endLabel =
+    end.getFullYear() !== start.getFullYear()
+      ? LONG_DATE.format(end)
+      : `${SHORT_DATE.format(end)}, ${end.getFullYear()}`;
+
+  return `${startLabel} – ${endLabel}`;
+}

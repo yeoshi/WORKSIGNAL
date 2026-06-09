@@ -42,6 +42,8 @@ export async function GET() {
             adjustments_made: entry.adjustments_made,
             emergency: entry.emergency,
             brief_text: entry.brief_text,
+            growth_activities: entry.growth_activities ?? [],
+            network_activities: entry.network_activities ?? [],
             created_at: entry.created_at,
         });
     } catch (error) {

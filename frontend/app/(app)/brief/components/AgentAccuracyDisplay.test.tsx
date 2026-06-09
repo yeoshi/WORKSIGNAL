@@ -6,10 +6,11 @@
  * with their correct/total counts and accuracy percentages.
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { AgentAccuracyDisplay } from './AgentAccuracyDisplay';
 import type { AgentName, AgentAccuracy } from '@worksignal/shared';
+import type { BriefGrowthActivity, BriefNetworkActivity } from '../lib/briefTypes';
 
 const mockPerformance: Record<AgentName, AgentAccuracy> = {
     ambition: { correct: 8, incorrect: 2 },
@@ -19,6 +20,15 @@ const mockPerformance: Record<AgentName, AgentAccuracy> = {
 };
 
 describe('AgentAccuracyDisplay', () => {
+    it('renders agent names with Agent suffix', () => {
+        render(<AgentAccuracyDisplay agentPerformance={mockPerformance} />);
+
+        expect(screen.getByText('Ambition Agent')).toBeInTheDocument();
+        expect(screen.getByText('Realism Agent')).toBeInTheDocument();
+        expect(screen.getByText('Risk Agent')).toBeInTheDocument();
+        expect(screen.getByText('Opportunity Agent')).toBeInTheDocument();
+    });
+
     it('renders all four agent accuracy cards', () => {
         render(<AgentAccuracyDisplay agentPerformance={mockPerformance} />);
 
@@ -50,6 +60,65 @@ describe('AgentAccuracyDisplay', () => {
         expect(screen.getByTestId('agent-accuracy-risk')).toHaveTextContent(
             '9 correct / 10 total evaluations'
         );
+    });
+
+    it('renders one collapsible Growth Agent card when growth activities exist', () => {
+        const growth: BriefGrowthActivity[] = [
+            {
+                skill: 'SQL & Data Analysis',
+                times_flagged: 3,
+                projected_match_improvement: '61% → 79%',
+                reason: 'Realism Agent flagged this skill gap across 3 distinct job matches.',
+                summary: 'Built a four-week roadmap with linked resources.',
+            },
+        ];
+
+        render(
+            <AgentAccuracyDisplay
+                agentPerformance={mockPerformance}
+                growthActivities={growth}
+            />
+        );
+
+        expect(screen.getByTestId('agent-activity-growth')).toBeInTheDocument();
+        expect(screen.getByText('Growth Agent')).toBeInTheDocument();
+        expect(screen.getByText(/1 roadmap built/)).toBeInTheDocument();
+        expect(
+            screen.queryByText('Built a four-week roadmap with linked resources.')
+        ).not.toBeVisible();
+
+        fireEvent.click(screen.getByText('Growth Agent'));
+
+        expect(
+            screen.getByText('Built a four-week roadmap with linked resources.')
+        ).toBeVisible();
+    });
+
+    it('renders one collapsible Network Agent card when network activities exist', () => {
+        const network: BriefNetworkActivity[] = [
+            {
+                company: 'Grab',
+                application_count: 2,
+                suggestion_count: 3,
+                reason: 'You sent 2 applications to Grab this week.',
+                summary: 'Drafted 3 personalised outreach messages.',
+            },
+        ];
+
+        render(
+            <AgentAccuracyDisplay
+                agentPerformance={mockPerformance}
+                networkActivities={network}
+            />
+        );
+
+        expect(screen.getByTestId('agent-activity-network')).toBeInTheDocument();
+        expect(screen.getByText('Network Agent')).toBeInTheDocument();
+        expect(screen.getByText(/3 suggestions drafted/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('Network Agent'));
+
+        expect(screen.getByText('Drafted 3 personalised outreach messages.')).toBeVisible();
     });
 
     it('handles zero evaluations gracefully', () => {

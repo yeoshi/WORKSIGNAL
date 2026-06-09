@@ -1,5 +1,10 @@
 import type { AgentName, Decision, MasterDecision } from '@worksignal/shared';
+import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { AGENT_THEME } from './agentTheme';
+import {
+  DECISION_TIER_STYLES,
+  getDecisionTier,
+} from '../lib/getDecisionTier';
 
 export interface DecisionSummaryProps {
   decision: MasterDecision;
@@ -13,38 +18,30 @@ const DECISION_LABEL: Record<Decision, string> = {
   veto_skip: 'Veto — skip',
 };
 
-const DECISION_COLOR: Record<Decision, string> = {
-  apply_consensus: '#059669',
-  apply_with_caveat: '#2563EB',
-  skip_consensus: '#6B7280',
-  deadlock_escalate: '#D97706',
-  veto_skip: '#EF4444',
-};
-
 function agentLabel(agent: AgentName): string {
   return AGENT_THEME[agent].label;
 }
 
-/**
- * The Master Orchestrator decision summary (Req 15.3): the resolved decision,
- * a human-readable summary, supporting/opposing agents, any dissent note, and
- * the explicit-confirmation flag for low-realism applies (Req 12.6).
- */
 export function DecisionSummary({ decision }: DecisionSummaryProps) {
-  const color = DECISION_COLOR[decision.decision];
+  const tier = getDecisionTier(decision.decision);
+  const tierStyles = DECISION_TIER_STYLES[tier];
 
   return (
     <section
       data-testid="decision-summary"
-      aria-label="Master decision summary"
-      className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+      data-decision-tier={tier}
+      aria-label="Orchestrator decision summary"
+      className={['rounded-2xl border p-6 shadow-sm', tierStyles.section].join(' ')}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-gray-900">Master decision</h2>
+        <div className="flex items-center gap-3">
+          <AgentAvatar agent="orchestrator" size={56} />
+          <h2 className="text-lg font-semibold text-gray-900">Orchestrator Decision</h2>
+        </div>
         <span
           data-testid="decision-badge"
           className="rounded-full px-3 py-1 text-sm font-semibold text-white"
-          style={{ backgroundColor: color }}
+          style={{ backgroundColor: tierStyles.badge }}
         >
           {DECISION_LABEL[decision.decision]}
         </span>
@@ -57,7 +54,7 @@ export function DecisionSummary({ decision }: DecisionSummaryProps) {
       {decision.user_action_required ? (
         <p
           data-testid="decision-action-required"
-          className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+          className="mt-3 rounded-lg bg-amber-100/80 px-3 py-2 text-sm font-medium text-amber-900"
         >
           Your explicit confirmation is required before this application proceeds.
         </p>

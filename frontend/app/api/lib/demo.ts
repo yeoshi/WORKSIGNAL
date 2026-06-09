@@ -144,7 +144,7 @@ export const DEMO_JOB_DETAIL = {
             verdict: 'apply',
             ambition_score: 87,
             reasoning:
-                'Grab is a tier-1 regional tech company. Strong brand value for an early-career resume.',
+                "I'd say Grab is a tier-1 regional tech company with strong brand value for an early-career resume.",
             key_argument: 'Product Analyst is a well-trodden path into PM roles.',
         },
         realism: {
@@ -153,8 +153,8 @@ export const DEMO_JOB_DETAIL = {
             key_gaps: ['High applicant volume for Grab roles'],
             work_life_flags: [],
             reasoning:
-                'Salary range aligns with your minimum. Requirements match your SQL skills.',
-            key_argument: 'Profile is competitive despite high competition.',
+                "I'd note the salary range aligns with your minimum and the requirements match your SQL skills.",
+            key_argument: "I'd say your profile is competitive despite high competition.",
         },
         risk: {
             verdict: 'safe',
@@ -162,7 +162,7 @@ export const DEMO_JOB_DETAIL = {
             red_flags: [],
             glassdoor_score: 4.1,
             reasoning:
-                'No significant red flags. Grab is a stable employer with established career frameworks.',
+                "I don't see significant red flags — Grab is a stable employer with established career frameworks.",
             key_argument: 'Permanent full-time contract with clear progression.',
         },
         opportunity: {
@@ -170,7 +170,7 @@ export const DEMO_JOB_DETAIL = {
             urgency_score: 90,
             timing_factors: ['Listing is recent', 'Strong regional exposure'],
             reasoning:
-                'Regional exposure and cross-functional work are high-value for career development.',
+                "I'd highlight that regional exposure and cross-functional work are high-value for career development.",
             key_argument: 'Clear progression path to Senior Analyst or PM.',
         },
     },
@@ -190,60 +190,117 @@ export const DEMO_JOB_DETAIL = {
         customisation_applied: true,
     },
     coverLetter: DEMO_COVER_LETTER,
-    resumeUrl: null,
+    resumeUrl: '/api/demo/resume?file=resume-001.pdf',
+    baseResumeS3Key: 'demo/original-resume.pdf',
+    baseResumeUrl: '/api/demo/resume?file=original-resume.pdf',
 };
 
 export const DEMO_GROWTH = {
-    skill: 'SQL & Data Analysis',
-    times_flagged: 3,
-    roadmap: {
-        projected_match_improvement: '61% -> 79%',
-        networking_opportunities: [
-            {
-                name: 'Tech in Asia Singapore 2026',
-                date: '2026-06-20',
-                url: 'https://www.techinasia.com/events',
-                type: 'event' as const,
+    skills: [
+        {
+            skill: 'SQL & Data Analysis',
+            times_flagged: 3,
+            roadmap: {
+                projected_match_improvement: '61% -> 79%',
+                networking_opportunities: [
+                    {
+                        name: 'Tech in Asia Singapore 2026',
+                        date: '2026-06-20',
+                        url: 'https://www.techinasia.com/events',
+                        type: 'event' as const,
+                        week: 2,
+                    },
+                ],
+                weeks: [
+                    {
+                        week: 1,
+                        action: 'Complete Mode Analytics SQL Tutorial and practise window functions',
+                        resource_url: 'https://mode.com/sql-tutorial/',
+                        cost: 'Free',
+                        time_hours: 6,
+                        type: 'course' as const,
+                    },
+                    {
+                        week: 2,
+                        action: 'Solve LeetCode SQL Top 50 — focus on aggregations and joins',
+                        resource_url: 'https://leetcode.com/studyplan/top-sql-50/',
+                        cost: 'Free',
+                        time_hours: 5,
+                        type: 'project' as const,
+                    },
+                    {
+                        week: 3,
+                        action: 'Build a Tableau dashboard using a Singapore open dataset and publish it on Tableau Public',
+                        resource_url: 'https://public.tableau.com',
+                        cost: 'Free',
+                        time_hours: 6,
+                        type: 'project' as const,
+                    },
+                    {
+                        week: 4,
+                        action: 'Complete the Google Data Analytics Certificate capstone project and add it to your LinkedIn',
+                        resource_url: 'https://www.coursera.org/professional-certificates/google-data-analytics',
+                        cost: 'S$59/mo',
+                        time_hours: 8,
+                        type: 'certification' as const,
+                    },
+                ],
             },
-        ],
-        weeks: [
-            {
-                week: 1,
-                action: 'Complete Mode Analytics SQL Tutorial and practise window functions',
-                resource_url: 'https://mode.com/sql-tutorial/',
-                cost: 'Free',
-                time_hours: 6,
-                type: 'course' as const,
+        },
+        {
+            skill: 'A/B Testing',
+            times_flagged: 2,
+            roadmap: {
+                projected_match_improvement: '55% -> 71%',
+                networking_opportunities: [
+                    {
+                        name: 'SG Product Hunt Meetup',
+                        date: '2026-06-25',
+                        url: 'https://www.meetup.com/singapore-product',
+                        type: 'event' as const,
+                        week: 3,
+                    },
+                ],
+                weeks: [
+                    {
+                        week: 1,
+                        action: 'Complete Udacity A/B Testing free course — focus on hypothesis testing and p-values',
+                        resource_url: 'https://www.udacity.com/course/ab-testing--ud257',
+                        cost: 'Free',
+                        time_hours: 6,
+                        type: 'course' as const,
+                    },
+                    {
+                        week: 2,
+                        action: 'Implement a simulated A/B test in Python using a public e-commerce dataset from Kaggle',
+                        resource_url: 'https://www.kaggle.com/datasets',
+                        cost: 'Free',
+                        time_hours: 5,
+                        type: 'project' as const,
+                    },
+                    {
+                        week: 3,
+                        action: 'Run a free Optimizely trial experiment on a personal project or portfolio site',
+                        resource_url: 'https://www.optimizely.com/free-trial/',
+                        cost: 'Free',
+                        time_hours: 4,
+                        type: 'project' as const,
+                    },
+                    {
+                        week: 4,
+                        action: 'Write a 500-word case study documenting your A/B test results and publish it on Medium or Substack',
+                        resource_url: 'https://medium.com',
+                        cost: 'Free',
+                        time_hours: 4,
+                        type: 'project' as const,
+                    },
+                ],
             },
-            {
-                week: 2,
-                action: 'Solve LeetCode SQL Top 50 — focus on aggregations and joins',
-                resource_url: 'https://leetcode.com/studyplan/top-sql-50/',
-                cost: 'Free',
-                time_hours: 5,
-                type: 'project' as const,
-            },
-            {
-                week: 3,
-                action: 'Complete Udacity A/B Testing free course and implement a sample test in Python',
-                resource_url: 'https://www.udacity.com/course/ab-testing--ud257',
-                cost: 'Free',
-                time_hours: 7,
-                type: 'course' as const,
-            },
-            {
-                week: 4,
-                action: 'Build a public Tableau dashboard using a Singapore open dataset and add it to your portfolio',
-                resource_url: 'https://public.tableau.com',
-                cost: 'Free',
-                time_hours: 6,
-                type: 'project' as const,
-            },
-        ],
-    },
+        },
+    ],
 };
 
-export const DEMO_NETWORK = {
+export const DEMO_NETWORK_GRAB = {
     company: 'Grab',
     application_count: 2,
     suggestions: [
@@ -253,6 +310,7 @@ export const DEMO_NETWORK = {
             context: 'Product Analyst, Grab · NUS Business Analytics 2023',
             outreach_draft:
                 'Hi Li Wei, I noticed we both graduated from NUS Business Analytics. I recently applied for the Product Analyst role at Grab and would love to hear about your experience on the team.',
+            linkedin_url: 'https://www.linkedin.com/in/liwei-tan',
         },
         {
             name: 'Sarah Koh',
@@ -260,6 +318,7 @@ export const DEMO_NETWORK = {
             context: 'Senior Product Manager, Grab Deliveries',
             outreach_draft:
                 'Hi Sarah, I have been following your posts in the SG Product community and admire the work your team is doing on Grab Deliveries. I applied for a Product Analyst role and would appreciate any advice.',
+            linkedin_url: 'https://www.linkedin.com/in/sarah-koh',
         },
         {
             name: 'Marcus Lim',
@@ -267,6 +326,7 @@ export const DEMO_NETWORK = {
             context: 'Data Analyst, Grab Financial',
             outreach_draft:
                 'Hi Marcus, I am exploring opportunities at Grab Financial and recently applied for a Product Analyst role. Would you be open to a brief chat about the team culture?',
+            email: 'marcus.lim@example.com',
         },
     ],
     upcoming_events: [
@@ -283,6 +343,38 @@ export const DEMO_NETWORK = {
             type: 'event',
         },
     ],
+};
+
+/** @deprecated Use DEMO_NETWORK_GRAB */
+export const DEMO_NETWORK = DEMO_NETWORK_GRAB;
+
+export const DEMO_NETWORK_GOVTECH = {
+    company: 'GovTech',
+    application_count: 2,
+    suggestions: [
+        {
+            name: 'Priya Nair',
+            type: 'alumni',
+            context: 'Associate Product Manager, GovTech · NUS CS 2022',
+            outreach_draft:
+                'Hi Priya, I noticed we both studied at NUS. I recently applied for the Associate Product Manager role at GovTech and would love to hear what the product team culture is like.',
+            linkedin_url: 'https://www.linkedin.com/in/priya-nair',
+        },
+        {
+            name: 'David Wong',
+            type: 'community',
+            context: 'Product Lead, GovTech Open Government Products',
+            outreach_draft:
+                'Hi David, I have been following OGP\'s work on public digital services and recently applied to GovTech. Would you be open to a short chat about breaking into product there?',
+            linkedin_url: 'https://www.linkedin.com/in/david-wong',
+        },
+    ],
+    upcoming_events: [],
+};
+
+export const DEMO_NETWORK_BY_COMPANY: Record<string, typeof DEMO_NETWORK_GRAB> = {
+    Grab: DEMO_NETWORK_GRAB,
+    GovTech: DEMO_NETWORK_GOVTECH,
 };
 
 export const DEMO_BRIEF = {
@@ -312,7 +404,47 @@ export const DEMO_BRIEF = {
         },
     ],
     emergency: false,
-    brief_text: `Week of 2 Jun 2026\n\nYou sent 5 applications this week and received 1 callback (Grab — Product Analyst). That's a 20% callback rate, well above the 8% Singapore tech market baseline.\n\nAgent Accuracy\nAll four agents performed well. Opportunity agent is slightly under-calling — threshold nudged down.\n\nNext Week\nFocus on the Grab callback. Two more applications are in-flight (GovTech, Grab Growth Analyst). Consider reaching out to your Grab alumni contact this week.`,
+    growth_activities: [
+        {
+            skill: 'SQL & Data Analysis',
+            times_flagged: 3,
+            projected_match_improvement: '61% → 79%',
+            reason:
+                'Realism Agent flagged this skill gap across 3 distinct job matches — Growth Agent activates at 3+.',
+            summary:
+                'Researched courses, projects, and certifications, then built a four-week roadmap with linked resources and a projected match-score lift.',
+        },
+        {
+            skill: 'A/B Testing',
+            times_flagged: 2,
+            projected_match_improvement: '55% → 71%',
+            reason:
+                'Realism Agent flagged A/B testing on 2 roles this week — Growth Agent is tracking it as an emerging gap.',
+            summary:
+                'Drafted a four-week practice plan covering hypothesis testing, a Python experiment, and a published case study.',
+        },
+    ],
+    network_activities: [
+        {
+            company: 'Grab',
+            application_count: 2,
+            suggestion_count: 3,
+            reason:
+                'You sent 2 applications to Grab this week — Network Agent activates when interest in a company hits 2+.',
+            summary:
+                'Found 3 connection paths (alumni, community, cold) and drafted personalised outreach for each, plus 2 relevant Singapore events.',
+        },
+        {
+            company: 'GovTech',
+            application_count: 2,
+            suggestion_count: 2,
+            reason:
+                'GovTech crossed the 2-application threshold — networking can shorten the wait on in-flight applications.',
+            summary:
+                'Surfaced 2 warm introductions (NUS alumni and SG product community) with ready-to-send outreach drafts.',
+        },
+    ],
+    brief_text: `Week of 2 Jun 2026\n\nYou sent 5 applications this week and received 1 callback (Grab — Product Analyst). That's a 20% callback rate, well above the 8% Singapore tech market baseline.\n\nAgent Accuracy\nAll four debate agents performed well. Opportunity Agent was slightly under-calling — its confidence threshold was nudged down. Growth Agent built roadmaps for SQL and A/B Testing; Network Agent drafted outreach for Grab and GovTech.\n\nNext Week\n• Prep for your Grab Product Analyst callback — review the JD and your tailored resume before they reach out.\n• Start Week 1 of your SQL & Data Analysis roadmap — block 6 hours for the Mode Analytics tutorial.\n• Send the Grab alumni outreach draft Network Agent prepared for Li Wei.\n• Check in on in-flight applications (GovTech, Grab Growth Analyst) if you haven't heard back by Thursday.`,
     created_at: '2026-06-09T06:00:00Z',
 };
 
@@ -363,6 +495,11 @@ export const DEMO_DASHBOARD = {
             company: 'Grab',
             application_count: 2,
             suggestion_count: 3,
+        },
+        {
+            company: 'GovTech',
+            application_count: 2,
+            suggestion_count: 2,
         },
     ],
     intelligence: {

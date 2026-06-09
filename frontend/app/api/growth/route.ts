@@ -10,7 +10,7 @@ import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_GROWTH } from '../lib/demo';
 
 export async function GET() {
-    if (DEMO_MODE) return Response.json(DEMO_GROWTH);
+    if (DEMO_MODE) return Response.json({ skills: DEMO_GROWTH.skills });
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
