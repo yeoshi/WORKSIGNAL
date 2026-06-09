@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import type { Application } from '@worksignal/shared';
 import type { ActionNeededItem } from '../types';
+import { markJobSkipped } from '../lib/skippedJobsStorage';
 
 export interface UseKanbanActionsOptions {
   actionNeeded: ActionNeededItem[];
@@ -62,12 +63,12 @@ export function useKanbanActions({
   );
 
   const send = useCallback(
-    async (jobId: string) => {
+    async (jobId: string, coverLetter = '') => {
       try {
         await fetch(`/api/jobs/${encodeURIComponent(jobId)}/send`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ coverLetter: '' }),
+          body: JSON.stringify({ coverLetter }),
         });
       } catch {
         // Tolerate missing backend in dev.
@@ -88,11 +89,10 @@ export function useKanbanActions({
       } catch {
         // Tolerate missing backend in dev.
       }
+      markJobSkipped(jobId);
       removeActionNeeded(jobId);
-      reloadDashboard();
-      reloadPipeline();
     },
-    [removeActionNeeded, reloadDashboard, reloadPipeline],
+    [removeActionNeeded],
   );
 
   const save = useCallback(async (_jobId: string) => {

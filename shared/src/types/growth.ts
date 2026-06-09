@@ -24,6 +24,8 @@ export interface NetworkingOpportunity {
   date: string;
   url: string;
   type: 'event';
+  /** Which roadmap week this event belongs to (1–4), if known. */
+  week?: number;
 }
 
 /**

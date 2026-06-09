@@ -96,10 +96,17 @@ export function normalizeNetworkResponse(body: unknown): NetworkData | null {
  * not met). Throws only on unexpected server errors so the caller can show a
  * retry affordance.
  */
-export async function fetchNetworkOnce(signal?: AbortSignal): Promise<NetworkData | null> {
+export async function fetchNetworkOnce(
+    signal?: AbortSignal,
+    company?: string,
+): Promise<NetworkData | null> {
+    const endpoint = company
+        ? `${NETWORK_ENDPOINT}?company=${encodeURIComponent(company)}`
+        : NETWORK_ENDPOINT;
+
     let response: Response;
     try {
-        response = await fetch(NETWORK_ENDPOINT, {
+        response = await fetch(endpoint, {
             headers: { Accept: 'application/json' },
             signal,
         });

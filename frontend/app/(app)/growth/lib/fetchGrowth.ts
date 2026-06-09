@@ -122,3 +122,48 @@ export async function fetchGrowthOnce(signal?: AbortSignal): Promise<GrowthRoadm
   const body: unknown = await response.json().catch(() => null);
   return normalizeGrowthResponse(body);
 }
+
+/**
+ * Fetch all growth roadmaps from the BFF endpoint.
+ *
+ * Handles the multi-skill `{ skills: [...] }` envelope returned when multiple
+ * skill gaps have been identified. Falls back to a single-item array when the
+ * endpoint returns the legacy single-skill shape.
+ */
+export async function fetchGrowthAll(signal?: AbortSignal): Promise<GrowthRoadmap[]> {
+  let response: Response;
+  try {
+    response = await fetch(GROWTH_ENDPOINT, {
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error;
+    }
+    return [];
+  }
+
+  if (response.status === 404 || response.status === 204) {
+    return [];
+  }
+
+  if (!response.ok) {
+    throw new Error(`Growth request failed with status ${response.status}`);
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+  if (!body || typeof body !== 'object') return [];
+
+  // Multi-skill envelope: { skills: [...] }
+  const rec = body as Record<string, unknown>;
+  if (Array.isArray(rec.skills)) {
+    return rec.skills
+      .map((item) => normalizeGrowthResponse(item))
+      .filter((r): r is GrowthRoadmap => r !== null);
+  }
+
+  // Legacy single-skill shape — wrap in array.
+  const single = normalizeGrowthResponse(body);
+  return single ? [single] : [];
+}

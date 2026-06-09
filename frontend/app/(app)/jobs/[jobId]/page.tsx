@@ -38,7 +38,9 @@ export default function JobDetailPage({ params }: { params: { jobId: string } })
     <JobDetailView
       data={state.data}
       resumeUrl={state.resumeUrl}
-       onAction={handleAction}
+      baseResumeUrl={state.baseResumeUrl}
+      baseResumeS3Key={state.baseResumeS3Key}
+      onAction={handleAction}
     />
   );
 }

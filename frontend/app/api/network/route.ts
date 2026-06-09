@@ -7,10 +7,15 @@
  */
 
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
-import { DEMO_MODE, DEMO_NETWORK } from '../lib/demo';
+import { DEMO_MODE, DEMO_NETWORK_BY_COMPANY } from '../lib/demo';
 
-export async function GET() {
-    if (DEMO_MODE) return Response.json(DEMO_NETWORK);
+export async function GET(request: Request) {
+    if (DEMO_MODE) {
+        const company = new URL(request.url).searchParams.get('company') ?? 'Grab';
+        const data = DEMO_NETWORK_BY_COMPANY[company];
+        if (!data) return new Response(null, { status: 204 });
+        return Response.json(data);
+    }
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();

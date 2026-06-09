@@ -84,4 +84,53 @@ describe('JobDetailView showActions', () => {
     render(<JobDetailView data={makeData()} onAction={() => {}} />);
     expect(screen.getByTestId('action-bar')).toBeDefined();
   });
+
+  it('shows download-only materials when showActions is false', () => {
+    render(<JobDetailView data={makeData()} showActions={false} />);
+    expect(screen.getByTestId('cover-letter-download')).toBeDefined();
+    expect(screen.getByTestId('cover-letter-download-btn')).toBeDefined();
+    expect(screen.queryByTestId('cover-letter-textarea')).toBeNull();
+  });
+
+  it('shows editable cover letter with download when showActions is true', () => {
+    render(<JobDetailView data={makeData()} showActions={true} onAction={() => {}} />);
+    expect(screen.getByTestId('cover-letter-editor')).toBeDefined();
+    expect(screen.getByTestId('cover-letter-textarea')).toBeDefined();
+    expect(screen.getByTestId('cover-letter-download-btn')).toBeDefined();
+  });
+
+  it('shows enabled resume download when showActions is true', () => {
+    render(
+      <JobDetailView
+        data={makeData()}
+        showActions={true}
+        resumeUrl="https://s3.example.com/resume.pdf"
+        onAction={() => {}}
+      />,
+    );
+    const download = screen.getByTestId('resume-download');
+    expect(download.tagName).toBe('A');
+    expect(download.getAttribute('href')).toBe('https://s3.example.com/resume.pdf');
+  });
+
+  it('hides job header when embedded', () => {
+    render(<JobDetailView data={makeData()} embedded showActions={false} />);
+    expect(screen.queryByTestId('job-header')).toBeNull();
+  });
+
+  it('shows job header when not embedded', () => {
+    render(<JobDetailView data={makeData()} showActions={false} />);
+    expect(screen.getByTestId('job-header')).toBeDefined();
+  });
+
+  it('hides Save in Needs Decision action bar', () => {
+    render(<JobDetailView data={makeData()} showActions={true} onAction={() => {}} />);
+    expect(screen.getByTestId('action-send')).toBeDefined();
+    expect(screen.queryByTestId('action-save')).toBeNull();
+  });
+
+  it('shows resume download button in read-only mode', () => {
+    render(<JobDetailView data={makeData()} showActions={false} />);
+    expect(screen.getByTestId('resume-download')).toBeDefined();
+  });
 });

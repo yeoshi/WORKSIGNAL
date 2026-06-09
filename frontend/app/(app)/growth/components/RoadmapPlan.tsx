@@ -3,13 +3,30 @@
  * Delegates to the horizontal {@link RoadmapTimeline} visualization.
  */
 
+'use client';
+
+import { useState } from 'react';
 import type { RoadmapWeek } from '@worksignal/shared';
-import { RoadmapTimeline } from './RoadmapTimeline';
+import { RoadmapTimeline, type WeekProgress } from './RoadmapTimeline';
+
+const EMPTY_PROGRESS: WeekProgress = {
+  completed: [],
+  skipped: [],
+  customProjects: {},
+};
 
 export interface RoadmapPlanProps {
   weeks: RoadmapWeek[];
 }
 
 export function RoadmapPlan({ weeks }: RoadmapPlanProps) {
-  return <RoadmapTimeline weeks={weeks} />;
+  const [progress, setProgress] = useState<WeekProgress>(EMPTY_PROGRESS);
+
+  return (
+    <RoadmapTimeline
+      weeks={weeks}
+      progress={progress}
+      onProgressChange={(updater) => setProgress(updater)}
+    />
+  );
 }

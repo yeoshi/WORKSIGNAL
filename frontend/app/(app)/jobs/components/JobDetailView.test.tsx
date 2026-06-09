@@ -11,7 +11,9 @@ import { DebateCardList } from './DebateCardList';
 import { DecisionSummary } from './DecisionSummary';
 import { ResumePreview } from './ResumePreview';
 import { CoverLetterEditor } from './CoverLetterEditor';
+import { ApplicationMaterials } from './ApplicationMaterials';
 import { ActionBar } from './ActionBar';
+import { JobModalHeader } from './JobModalHeader';
 import type { Job, VerdictSet, MasterDecision, Materials } from '@worksignal/shared';
 import type { AgentCardData } from './agentTheme';
 
@@ -146,7 +148,7 @@ describe('JobHeader (Req 15.1)', () => {
 describe('DebateCard (Req 15.2)', () => {
     const card: AgentCardData = {
         agent: 'ambition',
-        label: 'Ambition',
+        label: 'Ambition Agent',
         color: '#DC2626',
         verdict: 'apply',
         score: 85,
@@ -159,7 +161,7 @@ describe('DebateCard (Req 15.2)', () => {
 
     it('renders the agent label', () => {
         render(<DebateCard card={card} />);
-        expect(screen.getByText('Ambition')).toBeDefined();
+        expect(screen.getByText('Ambition Agent')).toBeDefined();
     });
 
     it('renders the verdict badge', () => {
@@ -174,16 +176,11 @@ describe('DebateCard (Req 15.2)', () => {
         expect(scoreEl.textContent).toContain('85/100');
     });
 
-    it('renders the reasoning text', () => {
+    it('renders first-person speech with reasoning and key argument', () => {
         render(<DebateCard card={card} />);
-        const reasoning = screen.getByTestId('debate-card-ambition-reasoning');
-        expect(reasoning.textContent).toBe('Strong career-ceiling lift with leadership scope.');
-    });
-
-    it('renders the key argument', () => {
-        render(<DebateCard card={card} />);
-        const keyArg = screen.getByTestId('debate-card-ambition-key-argument');
-        expect(keyArg.textContent).toBe('Role offers cross-functional leadership exposure.');
+        const speech = screen.getByTestId('debate-card-ambition-speech');
+        expect(speech.textContent).toContain('Strong career-ceiling lift');
+        expect(speech.textContent).toContain('cross-functional leadership exposure');
     });
 
     it('does not render score section when failed is true', () => {
@@ -236,23 +233,13 @@ describe('DebateCardList (Req 15.2)', () => {
         expect(screen.getByTestId('debate-card-opportunity-score').textContent).toContain('90/100');
     });
 
-    it('renders each card with reasoning', () => {
+    it('renders each card with speech blocks', () => {
         render(<DebateCardList verdicts={makeVerdictSet()} />);
-        expect(screen.getByTestId('debate-card-ambition-reasoning').textContent).toContain(
+        expect(screen.getByTestId('debate-card-ambition-speech').textContent).toContain(
             'Strong career-ceiling lift'
         );
-        expect(screen.getByTestId('debate-card-opportunity-reasoning').textContent).toContain(
+        expect(screen.getByTestId('debate-card-opportunity-speech').textContent).toContain(
             'High urgency'
-        );
-    });
-
-    it('renders each card with a key argument', () => {
-        render(<DebateCardList verdicts={makeVerdictSet()} />);
-        expect(screen.getByTestId('debate-card-ambition-key-argument').textContent).toContain(
-            'cross-functional leadership'
-        );
-        expect(screen.getByTestId('debate-card-opportunity-key-argument').textContent).toContain(
-            'fresh with low competition'
         );
     });
 
@@ -280,10 +267,40 @@ describe('DebateCardList (Req 15.2)', () => {
 // ---------------------------------------------------------------------------
 
 describe('DecisionSummary (Req 15.3)', () => {
+    it('renders Orchestrator Decision title', () => {
+        render(<DecisionSummary decision={makeDecision()} />);
+        expect(screen.getByText('Orchestrator Decision')).toBeDefined();
+    });
+
     it('renders the decision badge', () => {
         render(<DecisionSummary decision={makeDecision()} />);
         const badge = screen.getByTestId('decision-badge');
         expect(badge.textContent).toBe('Apply — consensus');
+    });
+
+    it('applies green tier styling for apply decisions', () => {
+        render(<DecisionSummary decision={makeDecision()} />);
+        const section = screen.getByTestId('decision-summary');
+        expect(section.getAttribute('data-decision-tier')).toBe('green');
+        expect(section.className).toContain('bg-emerald-50');
+    });
+
+    it('applies yellow tier styling for deadlock', () => {
+        render(
+            <DecisionSummary decision={makeDecision({ decision: 'deadlock_escalate' })} />
+        );
+        const section = screen.getByTestId('decision-summary');
+        expect(section.getAttribute('data-decision-tier')).toBe('yellow');
+        expect(section.className).toContain('bg-amber-50');
+    });
+
+    it('applies red tier styling for skip decisions', () => {
+        render(
+            <DecisionSummary decision={makeDecision({ decision: 'skip_consensus' })} />
+        );
+        const section = screen.getByTestId('decision-summary');
+        expect(section.getAttribute('data-decision-tier')).toBe('red');
+        expect(section.className).toContain('bg-rose-50');
     });
 
     it('renders the decision summary text', () => {
@@ -295,10 +312,10 @@ describe('DecisionSummary (Req 15.3)', () => {
     it('renders supporting agents', () => {
         render(<DecisionSummary decision={makeDecision()} />);
         const forSection = screen.getByTestId('agents-for');
-        expect(forSection.textContent).toContain('Ambition');
-        expect(forSection.textContent).toContain('Realism');
-        expect(forSection.textContent).toContain('Risk');
-        expect(forSection.textContent).toContain('Opportunity');
+        expect(forSection.textContent).toContain('Ambition Agent');
+        expect(forSection.textContent).toContain('Realism Agent');
+        expect(forSection.textContent).toContain('Risk Agent');
+        expect(forSection.textContent).toContain('Opportunity Agent');
     });
 
     it('renders opposing agents when present', () => {
@@ -313,7 +330,7 @@ describe('DecisionSummary (Req 15.3)', () => {
             />
         );
         const againstSection = screen.getByTestId('agents-against');
-        expect(againstSection.textContent).toContain('Risk');
+        expect(againstSection.textContent).toContain('Risk Agent');
     });
 
     it('renders dissent note when present', () => {
@@ -350,8 +367,8 @@ describe('DecisionSummary (Req 15.3)', () => {
             />
         );
         const failures = screen.getByTestId('agent-failures');
-        expect(failures.textContent).toContain('Risk');
-        expect(failures.textContent).toContain('Opportunity');
+        expect(failures.textContent).toContain('Risk Agent');
+        expect(failures.textContent).toContain('Opportunity Agent');
     });
 });
 
@@ -362,7 +379,11 @@ describe('DecisionSummary (Req 15.3)', () => {
 describe('ResumePreview (Req 15.4)', () => {
     it('renders the resume preview section', () => {
         render(
-            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+            />
         );
         expect(screen.getByTestId('resume-preview')).toBeDefined();
         expect(screen.getByText('Customised resume')).toBeDefined();
@@ -370,31 +391,54 @@ describe('ResumePreview (Req 15.4)', () => {
 
     it('renders resume instructions from the Master decision', () => {
         render(
-            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+            />
         );
         const instructions = screen.getByTestId('resume-instructions');
         expect(instructions.textContent).toContain('Emphasise leadership');
     });
 
-    it('renders a link when resumeUrl is provided', () => {
+    it('renders a download link when resumeUrl is provided', () => {
         render(
             <ResumePreview
                 materials={makeMaterials()}
                 decision={makeDecision()}
                 resumeUrl="https://s3.example.com/resume.pdf"
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
             />
         );
-        const link = screen.getByTestId('resume-link');
+        const link = screen.getByTestId('resume-download');
         expect(link.getAttribute('href')).toBe('https://s3.example.com/resume.pdf');
-        expect(link.textContent).toContain('View resume PDF');
+        expect(link.textContent).toContain('Download resume');
     });
 
-    it('shows S3 key fallback when no resumeUrl', () => {
+    it('shows disabled download when no resumeUrl', () => {
         render(
-            <ResumePreview materials={makeMaterials()} decision={makeDecision()} />
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+            />
         );
-        const pending = screen.getByTestId('resume-pending');
-        expect(pending.textContent).toContain('resumes/user-001/job-001-customised.pdf');
+        const download = screen.getByTestId('resume-download') as HTMLButtonElement;
+        expect(download.disabled).toBe(true);
+    });
+
+    it('shows use original resume toggle when editable', () => {
+        render(
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+                editable
+                canUseOriginalResume
+                onUseOriginalResume={() => {}}
+            />
+        );
+        expect(screen.getByTestId('resume-use-original')).toBeDefined();
     });
 
     it('shows base resume fallback badge when customisation_applied is false', () => {
@@ -402,6 +446,7 @@ describe('ResumePreview (Req 15.4)', () => {
             <ResumePreview
                 materials={makeMaterials({ customisation_applied: false })}
                 decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
             />
         );
         const badge = screen.getByTestId('resume-base-fallback');
@@ -471,6 +516,68 @@ describe('CoverLetterEditor (Req 15.4)', () => {
         );
         const textarea = screen.getByTestId('cover-letter-textarea') as HTMLTextAreaElement;
         expect(textarea.disabled).toBe(true);
+    });
+
+    it('renders download in editable mode', () => {
+        render(
+            <CoverLetterEditor
+                value="My cover letter"
+                onChange={() => { }}
+                decision={makeDecision()}
+                editable={true}
+            />
+        );
+        expect(screen.getByTestId('cover-letter-download-btn')).toBeDefined();
+        expect(
+            screen.getByTestId('cover-letter-download-btn').getAttribute('aria-label'),
+        ).toBe('Download cover letter');
+    });
+
+    it('renders download-only mode when editable is false', () => {
+        render(
+            <CoverLetterEditor
+                value="My cover letter"
+                onChange={() => { }}
+                decision={makeDecision()}
+                editable={false}
+            />
+        );
+        expect(screen.getByTestId('cover-letter-download')).toBeDefined();
+        expect(screen.getByTestId('cover-letter-download-btn')).toBeDefined();
+        expect(screen.queryByTestId('cover-letter-textarea')).toBeNull();
+    });
+});
+
+describe('ApplicationMaterials', () => {
+    it('renders wider cover-letter two-column layout', () => {
+        render(
+            <ApplicationMaterials
+                job={makeJob()}
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                baseResumeS3Key="resumes/user-001/base.pdf"
+                coverLetter="Hello"
+                onCoverLetterChange={() => {}}
+                originalCoverLetter="Hello"
+                editable={true}
+            />
+        );
+        const grid = screen.getByTestId('application-materials');
+        expect(grid.className).toContain('2.25fr');
+        expect(screen.getByTestId('resume-preview')).toBeDefined();
+        expect(screen.getByTestId('cover-letter-editor')).toBeDefined();
+    });
+});
+
+describe('JobModalHeader', () => {
+    it('renders company, role, salary, and location', () => {
+        render(<JobModalHeader job={makeJob()} />);
+        expect(screen.getByTestId('job-modal-header')).toBeDefined();
+        const header = screen.getByTestId('job-modal-header');
+        expect(header.textContent).toContain('TechCorp Singapore');
+        expect(header.textContent).toContain('Senior Frontend Engineer');
+        expect(screen.getByTestId('job-modal-salary').textContent).toContain('8,000');
+        expect(screen.getByText('Singapore')).toBeDefined();
     });
 });
 
@@ -607,6 +714,20 @@ describe('ActionBar (Req 15.5)', () => {
         );
         const note = screen.getByTestId('redirect-note');
         expect(note.textContent).toContain('No employer email found');
+    });
+
+    it('hides Save when showSave is false', () => {
+        render(
+            <ActionBar
+                hasEmployerEmail={true}
+                sourceUrl="https://example.com/job"
+                onSend={() => { }}
+                onSkip={() => { }}
+                onSave={() => { }}
+                showSave={false}
+            />
+        );
+        expect(screen.queryByTestId('action-save')).toBeNull();
     });
 
     it('disables buttons when busy', () => {

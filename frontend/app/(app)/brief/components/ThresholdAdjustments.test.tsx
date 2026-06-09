@@ -36,29 +36,24 @@ describe('ThresholdAdjustments', () => {
         expect(items).toHaveLength(2);
     });
 
-    it('renders prior and new values', () => {
+    it('renders agent labels and threshold values visually', () => {
         render(<ThresholdAdjustments adjustments={mockAdjustments} />);
-        const priorValues = screen.getAllByTestId('prior-value');
-        const newValues = screen.getAllByTestId('new-value');
+        const items = screen.getAllByTestId('threshold-adjustment-item');
 
-        expect(priorValues[0]).toHaveTextContent('80');
-        expect(newValues[0]).toHaveTextContent('75');
-        expect(priorValues[1]).toHaveTextContent('0.8');
-        expect(newValues[1]).toHaveTextContent('0.6');
+        expect(screen.getByText('Realism Agent')).toBeInTheDocument();
+        expect(screen.getByText('Risk Agent')).toBeInTheDocument();
+        expect(screen.getByText('Match threshold')).toBeInTheDocument();
+        expect(screen.getByText('Red flag weight')).toBeInTheDocument();
+        expect(items[0]).toHaveTextContent('80');
+        expect(items[0]).toHaveTextContent('75');
+        expect(items[1]).toHaveTextContent('80%');
+        expect(items[1]).toHaveTextContent('60%');
     });
 
-    it('renders agent labels and parameters', () => {
-        render(<ThresholdAdjustments adjustments={mockAdjustments} />);
-        expect(screen.getByText('Realism')).toBeInTheDocument();
-        expect(screen.getByText('match_threshold')).toBeInTheDocument();
-        expect(screen.getByText('Risk')).toBeInTheDocument();
-        expect(screen.getByText('red_flag_weight')).toBeInTheDocument();
-    });
-
-    it('renders adjustment reasons', () => {
+    it('renders plain-English adjustment summaries', () => {
         render(<ThresholdAdjustments adjustments={mockAdjustments} />);
         expect(
-            screen.getByText('Callback rate below 5% for two consecutive weeks')
+            screen.getByText(/Realism Agent was filtering out too many matches/)
         ).toBeInTheDocument();
         expect(
             screen.getByText('Too many false positives on risk flags')

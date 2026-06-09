@@ -82,8 +82,7 @@ describe('PipelineKanban', () => {
       />,
     );
 
-    expect(screen.getByTestId('decision-action-done')).toBeDefined();
-    expect(screen.getByTestId('decision-action-save')).toBeDefined();
+    expect(screen.getByTestId('decision-action-review')).toBeDefined();
     expect(screen.getByTestId('decision-action-skip')).toBeDefined();
     expect(screen.queryAllByTestId('decision-action-send')).toHaveLength(0);
   });

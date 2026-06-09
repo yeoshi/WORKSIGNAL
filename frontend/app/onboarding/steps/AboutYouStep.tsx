@@ -70,6 +70,7 @@ export function AboutYouStep({
     stage?: string;
     residency?: string;
     switch?: string;
+    submit?: string;
   }>({});
   const [busy, setBusy] = useState(false);
 
@@ -97,8 +98,17 @@ export function AboutYouStep({
     };
 
     setBusy(true);
-    await saveCareerProfile(value);
+    const result = await saveCareerProfile(value);
     setBusy(false);
+
+    if (!result.ok) {
+      setErrors((e) => ({
+        ...e,
+        submit: result.message,
+      }));
+      return;
+    }
+
     onComplete(value);
   }
 
@@ -178,6 +188,12 @@ export function AboutYouStep({
           }}
         />
       </Field>
+
+      {errors.submit && (
+        <p role="alert" className="text-sm font-medium text-red-600">
+          {errors.submit}
+        </p>
+      )}
 
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={onBack}>

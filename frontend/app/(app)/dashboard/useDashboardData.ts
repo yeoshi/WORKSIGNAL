@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ApprovalState } from '@worksignal/shared';
 import type { DashboardData } from './types';
+import { filterSkippedActionNeeded } from './lib/skippedJobsStorage';
 
 /**
  * Client-side data hook for the dashboard.
@@ -40,7 +41,10 @@ export function useDashboardData(): UseDashboardData {
         return;
       }
       const payload = (await res.json()) as DashboardData;
-      setData(payload);
+      setData({
+        ...payload,
+        action_needed: filterSkippedActionNeeded(payload.action_needed),
+      });
       setState('ready');
     } catch {
       setState('error');

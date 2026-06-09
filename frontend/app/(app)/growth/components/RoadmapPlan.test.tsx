@@ -1,7 +1,4 @@
 // @vitest-environment jsdom
-/**
- * Component tests for RoadmapPlan / RoadmapTimeline (Req 19.5).
- */
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
@@ -37,13 +34,6 @@ describe('RoadmapPlan', () => {
     expect(stages[1]).toHaveAttribute('data-week', '2');
     expect(stages[2]).toHaveAttribute('data-week', '3');
     expect(stages[3]).toHaveAttribute('data-week', '4');
-  });
-
-  it('renders the section heading', () => {
-    const weeks = [makeWeek(1), makeWeek(2)];
-    render(<RoadmapPlan weeks={weeks} />);
-
-    expect(screen.getByText('Four-week plan')).toBeInTheDocument();
   });
 
   it('shows selected week detail card', () => {

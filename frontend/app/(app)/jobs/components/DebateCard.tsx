@@ -1,3 +1,5 @@
+import { AgentAvatar } from '../../../components/ui/AgentAvatar';
+import { formatAgentSpeech } from '../lib/formatAgentSpeech';
 import type { AgentCardData } from './agentTheme';
 
 export interface DebateCardProps {
@@ -11,27 +13,29 @@ function prettyVerdict(verdict: string): string {
     .join(' ');
 }
 
-/**
- * A single agent debate card showing the agent's verdict, score, reasoning,
- * and key argument (Req 15.2). Purely presentational so it can be targeted
- * by snapshot/component tests (task 22.2). The agent accent colour is applied
- * via inline style to stay independent of the Tailwind palette.
- */
 export function DebateCard({ card }: DebateCardProps) {
+  const speech = formatAgentSpeech({
+    reasoning: card.reasoning,
+    keyArgument: card.keyArgument,
+  });
+
   return (
     <article
       data-testid={`debate-card-${card.agent}`}
       className="flex h-full flex-col rounded-2xl border bg-white p-5 shadow-sm"
       style={{ borderTopColor: card.color, borderTopWidth: 4 }}
-      aria-label={`${card.label} agent verdict`}
+      aria-label={`${card.label} verdict`}
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold" style={{ color: card.color }}>
-          {card.label}
-        </h3>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <AgentAvatar agent={card.agent} size={56} />
+          <h3 className="text-base font-semibold" style={{ color: card.color }}>
+            {card.label}
+          </h3>
+        </div>
         <span
           data-testid={`debate-card-${card.agent}-verdict`}
-          className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+          className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-white"
           style={{ backgroundColor: card.color }}
         >
           {prettyVerdict(card.verdict)}
@@ -56,22 +60,13 @@ export function DebateCard({ card }: DebateCardProps) {
         </div>
       ) : null}
 
-      <p
-        data-testid={`debate-card-${card.agent}-reasoning`}
-        className="mt-4 text-sm leading-relaxed text-gray-700"
+      <blockquote
+        data-testid={`debate-card-${card.agent}-speech`}
+        className="mt-4 border-l-2 pl-3 text-sm italic leading-relaxed text-gray-700"
+        style={{ borderLeftColor: card.color }}
       >
-        {card.reasoning}
-      </p>
-
-      {card.keyArgument ? (
-        <p
-          data-testid={`debate-card-${card.agent}-key-argument`}
-          className="mt-3 border-l-2 pl-3 text-sm italic text-gray-600"
-          style={{ borderLeftColor: card.color }}
-        >
-          {card.keyArgument}
-        </p>
-      ) : null}
+        &ldquo;{speech}&rdquo;
+      </blockquote>
 
       {card.details.length > 0 ? (
         <dl className="mt-4 space-y-2 text-sm">

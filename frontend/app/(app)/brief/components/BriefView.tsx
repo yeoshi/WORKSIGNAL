@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { SummaryMetrics } from './SummaryMetrics';
 import { AgentAccuracyDisplay } from './AgentAccuracyDisplay';
 import { ThresholdAdjustments } from './ThresholdAdjustments';
+import { BriefSummary } from './BriefSummary';
 import { fetchBriefOnce, type WeeklyBrief } from '../lib/fetchBrief';
 import { formatWeekOf } from '../../../lib/formatDate';
 
@@ -13,7 +14,26 @@ type LoadState =
   | { status: 'error' }
   | { status: 'ready'; data: WeeklyBrief };
 
-export function BriefView({ showHeader = true }: { showHeader?: boolean }) {
+const SG_MARKET_CALLBACK_RATE = 0.08;
+
+function formatBriefIntro(callbackRate: number): string {
+  const multiplier = callbackRate / SG_MARKET_CALLBACK_RATE;
+  const rounded =
+    multiplier >= 10
+      ? Math.round(multiplier).toString()
+      : multiplier % 1 === 0
+        ? multiplier.toFixed(0)
+        : multiplier.toFixed(1);
+  return `Your callback rate is ${rounded}× the Singapore average. Here's what your agents learned this week.`;
+}
+
+export function BriefView({
+  showHeader = true,
+  showIntro = false,
+}: {
+  showHeader?: boolean;
+  showIntro?: boolean;
+}) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
@@ -78,32 +98,36 @@ export function BriefView({ showHeader = true }: { showHeader?: boolean }) {
   }
 
   return (
-    <>
-      {showHeader && (
-        <header className="mb-2">
-          <p className="text-sm text-ws-muted">
-            {formatWeekOf(state.data.week_of)}
-            {state.data.emergency && (
-              <span className="ml-2 inline-flex items-center rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
-                Emergency recalibration
-              </span>
-            )}
-          </p>
-        </header>
+    <div className="flex flex-col gap-10">
+      {(showHeader || (showIntro && state.data.metrics.callback_rate != null)) && (
+        <div className="flex flex-col gap-3">
+          {showHeader && (
+            <header>
+              <p className="text-sm text-ws-muted">
+                {formatWeekOf(state.data.week_of)}
+                {state.data.emergency && (
+                  <span className="ml-2 inline-flex items-center rounded bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
+                    Emergency recalibration
+                  </span>
+                )}
+              </p>
+            </header>
+          )}
+          {showIntro && state.data.metrics.callback_rate != null && (
+            <p data-testid="brief-intro" className="text-sm italic text-gray-600">
+              {formatBriefIntro(state.data.metrics.callback_rate)}
+            </p>
+          )}
+        </div>
       )}
       <SummaryMetrics metrics={state.data.metrics} />
-      <AgentAccuracyDisplay agentPerformance={state.data.agent_performance} />
+      <AgentAccuracyDisplay
+        agentPerformance={state.data.agent_performance}
+        growthActivities={state.data.growth_activities}
+        networkActivities={state.data.network_activities}
+      />
       <ThresholdAdjustments adjustments={state.data.adjustments_made} />
-      {state.data.brief_text && (
-        <section aria-label="Generated brief" data-testid="brief-text">
-          <h2 className="ws-section-label">Summary</h2>
-          <div className="rounded-lg border border-ws-line bg-ws-card p-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ws-muted">
-              {state.data.brief_text}
-            </p>
-          </div>
-        </section>
-      )}
-    </>
+      {state.data.brief_text && <BriefSummary briefText={state.data.brief_text} />}
+    </div>
   );
 }

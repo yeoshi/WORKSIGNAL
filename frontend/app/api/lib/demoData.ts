@@ -277,7 +277,7 @@ export const demoJobDetail = {
         ambition: {
             verdict: 'apply',
             ambition_score: 88,
-            reasoning: 'This role at Grab offers significant career-ceiling lift. Platform engineering at this scale is a rare opportunity in Singapore that directly leads to Staff/Principal-level positions. The super-app context means exposure to payments, logistics, and ride-hailing infrastructure.',
+            reasoning: "I'd say this role at Grab offers significant career-ceiling lift. Platform engineering at this scale is a rare opportunity in Singapore that directly leads to Staff/Principal-level positions. The super-app context means exposure to payments, logistics, and ride-hailing infrastructure.",
             key_argument: 'Platform team at a regional tech leader - clear path to Staff Engineer.',
         },
         realism: {
@@ -285,8 +285,8 @@ export const demoJobDetail = {
             match_score: 76,
             key_gaps: ['Kubernetes orchestration at scale', 'Kafka stream processing'],
             work_life_flags: [],
-            reasoning: 'Strong match on TypeScript, AWS, and distributed systems fundamentals. Minor gaps in container orchestration and stream processing can be bridged within the first quarter given your microservices background.',
-            key_argument: '76% match with bridgeable gaps - realistic callback probability.',
+            reasoning: "I see a strong match on TypeScript, AWS, and distributed systems fundamentals. Minor gaps in container orchestration and stream processing can be bridged within the first quarter given your microservices background.",
+            key_argument: '76% match with bridgeable gaps — realistic callback probability.',
         },
         risk: {
             verdict: 'safe',
@@ -295,14 +295,14 @@ export const demoJobDetail = {
                 { flag: 'Recent 5% workforce reduction in non-core divisions', source: 'TechCrunch, Mar 2025', severity: 'low' },
             ],
             glassdoor_score: 4.1,
-            reasoning: 'Grab is financially stable post-profitability with strong market position in SEA. The recent workforce reduction was limited to non-engineering functions. Engineering team is actively hiring with increased headcount targets.',
+            reasoning: "I'd say Grab is financially stable post-profitability with strong market position in SEA. The recent workforce reduction was limited to non-engineering functions, and the engineering team is actively hiring with increased headcount targets.",
             key_argument: 'Profitable super-app with growing engineering team - low risk.',
         },
         opportunity: {
             verdict: 'act_now',
             urgency_score: 91,
             timing_factors: ['Posted 3 days ago', 'Only 12 applicants on MCF', 'Q3 headcount cycle opening'],
-            reasoning: 'Fresh posting with low applicant count during a headcount expansion cycle. Moving quickly gives first-mover advantage before the role attracts more senior candidates.',
+            reasoning: "I'd move on this fresh posting — low applicant count during a headcount expansion cycle gives you first-mover advantage before more senior candidates arrive.",
             key_argument: 'Fresh listing + low competition + active hiring cycle.',
         },
     },

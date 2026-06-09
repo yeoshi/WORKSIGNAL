@@ -11,7 +11,7 @@ export interface BriefModalProps {
 export function BriefModal({ open, onClose }: BriefModalProps) {
   return (
     <Modal open={open} onClose={onClose} title="Weekly Brief" size="xl">
-      <BriefView showHeader />
+      <BriefView showHeader showIntro />
     </Modal>
   );
 }

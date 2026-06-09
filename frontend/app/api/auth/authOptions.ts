@@ -1,5 +1,10 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { DEMO_MODE } from '../lib/demo';
+import { persistOAuthSignIn } from './persistOAuthSignIn';
+
+const TOKEN_ENCRYPTION_SECRET =
+  process.env.TOKEN_ENCRYPTION_SECRET ?? 'dev-encryption-secret-change-in-production';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,6 +22,35 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ account, profile }) {
+      if (!account || !profile) {
+        return false;
+      }
+
+      if (DEMO_MODE) {
+        return true;
+      }
+
+      try {
+        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const db = new DynamoDBWrapper();
+        const result = await persistOAuthSignIn({
+          profile: profile as {
+            sub?: string | null;
+            email?: string | null;
+            name?: string | null;
+          },
+          account,
+          encryptionSecret: TOKEN_ENCRYPTION_SECRET,
+          db,
+        });
+
+        return result.redirectUrl ?? true;
+      } catch (error) {
+        console.error('OAuth sign-in persistence failed:', error);
+        return false;
+      }
+    },
     async jwt({ token, account, profile }) {
       if (account && profile) {
         token.sub = (profile as { sub?: string }).sub ?? token.sub;

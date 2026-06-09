@@ -1,33 +1,112 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Archive } from 'lucide-react';
 import { SkillGapHeader } from './SkillGapHeader';
-import { RoadmapTimeline } from './RoadmapTimeline';
-import { fetchGrowthOnce, type GrowthRoadmap } from '../lib/fetchGrowth';
-import { formatShortDate } from '../../../lib/formatDate';
+import {
+  RoadmapTimeline,
+  type WeekProgress,
+  type WeekProgressUpdater,
+} from './RoadmapTimeline';
+import { RoadmapCelebration } from './RoadmapCelebration';
+import { ArchivedRoadmapsPanel } from './ArchivedRoadmapsPanel';
+import { RelatedEventsSection } from './RelatedEventsSection';
+import { PillTabs } from '../../../components/ui/PillTabs';
+import { fetchGrowthAll, type GrowthRoadmap } from '../lib/fetchGrowth';
+import { fireCelebrationConfetti } from '../../../lib/confetti';
+import {
+  isSkillResolved,
+  loadArchivedSkills,
+  loadProgressBySkill,
+  saveArchivedSkills,
+  saveProgressBySkill,
+} from '../lib/growthStorage';
+
+export { isSkillResolved };
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'empty' }
   | { status: 'error' }
-  | { status: 'ready'; data: GrowthRoadmap };
+  | { status: 'ready'; data: GrowthRoadmap[] };
 
-export function GrowthView() {
+type ViewMode = 'active' | 'archived';
+
+const EMPTY_PROGRESS: WeekProgress = {
+  completed: [],
+  skipped: [],
+  customProjects: {},
+};
+
+const ARCHIVE_DELAY_MS = 2500;
+
+export interface GrowthViewProps {
+  onTitleActionChange?: (action: ReactNode | null) => void;
+}
+
+function isActiveSkill(
+  roadmap: GrowthRoadmap,
+  archivedSkills: Set<string>,
+  progressBySkill: Record<string, WeekProgress>,
+  celebratingSkill: string | null = null,
+): boolean {
+  if (archivedSkills.has(roadmap.skill)) return false;
+  if (celebratingSkill === roadmap.skill) return true;
+  const progress = progressBySkill[roadmap.skill] ?? EMPTY_PROGRESS;
+  return !isSkillResolved(roadmap.roadmap.weeks, progress);
+}
+
+function firstActiveSkill(
+  data: GrowthRoadmap[],
+  archived: Set<string>,
+  progressBySkill: Record<string, WeekProgress>,
+): string {
+  return data.find((r) => isActiveSkill(r, archived, progressBySkill))?.skill ?? '';
+}
+
+export function GrowthView({ onTitleActionChange }: GrowthViewProps = {}) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [selectedSkill, setSelectedSkill] = useState('');
+  const [progressBySkill, setProgressBySkill] = useState(loadProgressBySkill);
+  const [archivedSkills, setArchivedSkills] = useState(loadArchivedSkills);
+  const [viewMode, setViewMode] = useState<ViewMode>('active');
+  const [celebratingSkill, setCelebratingSkill] = useState<string | null>(null);
+  const archiveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressBySkillRef = useRef(progressBySkill);
+  progressBySkillRef.current = progressBySkill;
+
+  useEffect(() => {
+    return () => {
+      if (archiveTimerRef.current) clearTimeout(archiveTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    saveArchivedSkills(archivedSkills);
+  }, [archivedSkills]);
+
+  useEffect(() => {
+    saveProgressBySkill(progressBySkill);
+  }, [progressBySkill]);
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
 
-    fetchGrowthOnce(controller.signal)
+    fetchGrowthAll(controller.signal)
       .then((data) => {
         if (!active) return;
-        setState(data ? { status: 'ready', data } : { status: 'empty' });
+        if (data.length === 0) {
+          setState({ status: 'empty' });
+        } else {
+          const archived = loadArchivedSkills();
+          const progress = loadProgressBySkill();
+          setState({ status: 'ready', data });
+          setSelectedSkill(firstActiveSkill(data, archived, progress));
+        }
       })
       .catch((error) => {
-        if (!active || (error instanceof DOMException && error.name === 'AbortError')) {
-          return;
-        }
+        if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
         setState({ status: 'error' });
       });
 
@@ -36,6 +115,120 @@ export function GrowthView() {
       controller.abort();
     };
   }, []);
+
+  const readyData = state.status === 'ready' ? state.data : [];
+  const activeTabs = readyData
+    .filter((r) => isActiveSkill(r, archivedSkills, progressBySkill, celebratingSkill))
+    .map((r) => r.skill);
+  const archivedList = readyData
+    .map((r) => r.skill)
+    .filter((skill) => archivedSkills.has(skill));
+
+  const activeRoadmap =
+    state.status === 'ready' && viewMode === 'active'
+      ? readyData.find(
+          (r) =>
+            r.skill === selectedSkill &&
+            isActiveSkill(r, archivedSkills, progressBySkill, celebratingSkill),
+        )
+        ?? readyData.find((r) =>
+          isActiveSkill(r, archivedSkills, progressBySkill, celebratingSkill),
+        )
+        ?? null
+      : null;
+
+  const activeProgress =
+    activeRoadmap != null
+      ? (progressBySkill[activeRoadmap.skill] ?? EMPTY_PROGRESS)
+      : EMPTY_PROGRESS;
+
+  useEffect(() => {
+    if (!onTitleActionChange || state.status !== 'ready') {
+      onTitleActionChange?.(null);
+      return;
+    }
+
+    onTitleActionChange(
+      <button
+        type="button"
+        data-testid="growth-archive-tab"
+        onClick={() => setViewMode((mode) => (mode === 'archived' ? 'active' : 'archived'))}
+        className={[
+          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition',
+          viewMode === 'archived'
+            ? 'border-gray-900 bg-gray-900 text-white'
+            : 'border-gray-200 text-gray-500 hover:bg-gray-50',
+        ].join(' ')}
+      >
+        <Archive size={12} aria-hidden />
+        Archive
+        {archivedList.length > 0 && (
+          <span
+            data-testid="growth-archive-count"
+            className={[
+              'rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none',
+              viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600',
+            ].join(' ')}
+          >
+            {archivedList.length}
+          </span>
+        )}
+      </button>,
+    );
+
+    return () => onTitleActionChange(null);
+  }, [state, viewMode, archivedList.length, onTitleActionChange]);
+
+  function archiveSkill(skill: string) {
+    setArchivedSkills((prev) => new Set([...prev, skill]));
+    setViewMode('active');
+
+    const remaining = readyData.filter(
+      (r) =>
+        r.skill !== skill &&
+        isActiveSkill(
+          r,
+          new Set([...archivedSkills, skill]),
+          progressBySkillRef.current,
+          null,
+        ),
+    );
+    setSelectedSkill(remaining[0]?.skill ?? '');
+  }
+
+  function beginCelebration(skill: string) {
+    setCelebratingSkill(skill);
+    fireCelebrationConfetti();
+
+    if (archiveTimerRef.current) clearTimeout(archiveTimerRef.current);
+    archiveTimerRef.current = setTimeout(() => {
+      archiveSkill(skill);
+      setCelebratingSkill((current) => (current === skill ? null : current));
+      archiveTimerRef.current = null;
+    }, ARCHIVE_DELAY_MS);
+  }
+
+  function handleProgressChange(updater: WeekProgressUpdater) {
+    if (!activeRoadmap) return;
+
+    const skill = activeRoadmap.skill;
+    const weeks = activeRoadmap.roadmap.weeks;
+
+    setProgressBySkill((prev) => {
+      const previous = prev[skill] ?? EMPTY_PROGRESS;
+      const progress = updater(previous);
+      const justResolved =
+        !isSkillResolved(weeks, previous) && isSkillResolved(weeks, progress);
+
+      if (justResolved && !archivedSkills.has(skill) && celebratingSkill !== skill) {
+        beginCelebration(skill);
+      }
+
+      const next = { ...prev, [skill]: progress };
+      progressBySkillRef.current = next;
+      return next;
+    });
+  }
 
   if (state.status === 'loading') {
     return (
@@ -72,42 +265,52 @@ export function GrowthView() {
     );
   }
 
+  if (viewMode === 'archived') {
+    return <ArchivedRoadmapsPanel skills={archivedList} />;
+  }
+
+  if (!activeRoadmap) {
+    return (
+      <div
+        data-testid="growth-all-complete"
+        className="flex flex-col items-center gap-2 rounded-card border border-emerald-200 bg-emerald-50 p-10 text-center"
+      >
+        <h2 className="text-xl font-semibold text-gray-900">
+          Nice job! Let&apos;s get you more callbacks!
+        </h2>
+        <p className="max-w-md text-sm text-gray-600">
+          All your growth roadmaps are complete. Open Archive to review them anytime.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
-      <SkillGapHeader
-        skill={state.data.skill}
-        projectedMatchImprovement={state.data.roadmap.projected_match_improvement}
-        timesFlagged={state.data.times_flagged}
-      />
-      <RoadmapTimeline weeks={state.data.roadmap.weeks} />
-      {state.data.roadmap.networking_opportunities.length > 0 && (
-        <section data-testid="related-events" aria-label="Related events">
-          <h2 className="ws-section-label">Related events</h2>
-          <ul className="flex flex-col gap-3">
-            {state.data.roadmap.networking_opportunities.map((event) => (
-              <li
-                key={`${event.name}-${event.date}`}
-                className="flex items-center justify-between gap-4 rounded-lg border border-ws-line bg-ws-card p-4"
-              >
-                <div>
-                  <span className="text-sm font-medium text-ws-ink">{event.name}</span>
-                  <span className="mt-0.5 block text-xs text-ws-muted">
-                    {formatShortDate(event.date)}
-                  </span>
-                </div>
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-ws-teal-mid hover:underline"
-                >
-                  Details
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {celebratingSkill && <RoadmapCelebration skill={celebratingSkill} />}
+
+      {activeTabs.length > 0 && (
+        <PillTabs
+          data-testid="growth-skill-tabs"
+          className="mb-6"
+          options={activeTabs.map((skill) => ({ id: skill, label: skill }))}
+          value={activeRoadmap.skill}
+          onChange={setSelectedSkill}
+        />
       )}
+
+      <SkillGapHeader
+        projectedMatchImprovement={activeRoadmap.roadmap.projected_match_improvement}
+        timesFlagged={activeRoadmap.times_flagged}
+      />
+
+      <RoadmapTimeline
+        weeks={activeRoadmap.roadmap.weeks}
+        progress={activeProgress}
+        onProgressChange={handleProgressChange}
+      />
+
+      <RelatedEventsSection events={activeRoadmap.roadmap.networking_opportunities} />
     </>
   );
 }

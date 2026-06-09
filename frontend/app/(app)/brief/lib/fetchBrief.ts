@@ -7,6 +7,7 @@
  */
 
 import type { RecalibrationLogEntry } from '@worksignal/shared';
+import type { BriefGrowthActivity, BriefNetworkActivity } from './briefTypes';
 
 /** Relative BFF endpoint serving the authenticated user's weekly brief. */
 export const BRIEF_ENDPOINT = '/api/brief';
@@ -16,7 +17,10 @@ export const BRIEF_ENDPOINT = '/api/brief';
  *
  * Wraps the {@link RecalibrationLogEntry} from the most recent recalibration.
  */
-export type WeeklyBrief = RecalibrationLogEntry;
+export type WeeklyBrief = RecalibrationLogEntry & {
+    growth_activities?: BriefGrowthActivity[];
+    network_activities?: BriefNetworkActivity[];
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === 'object';
@@ -46,7 +50,14 @@ export function normalizeBriefResponse(body: unknown): WeeklyBrief | null {
         typeof (body.metrics as Record<string, unknown>).callback_rate === 'number' &&
         isRecord(body.agent_performance)
     ) {
-        return body as unknown as WeeklyBrief;
+        const brief = body as unknown as WeeklyBrief;
+        if (!Array.isArray(brief.growth_activities)) {
+            brief.growth_activities = [];
+        }
+        if (!Array.isArray(brief.network_activities)) {
+            brief.network_activities = [];
+        }
+        return brief;
     }
 
     return null;

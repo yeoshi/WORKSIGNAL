@@ -32,12 +32,15 @@ export interface RelaxationSuggestionPromptProps {
   suggestion: Filter_Relaxation_Suggestion;
   onApprove: (suggestionId: string) => void | Promise<void>;
   onReject: (suggestionId: string) => void | Promise<void>;
+  /** When `card`, renders as a stacked issue card inside the issues modal. */
+  variant?: 'default' | 'card';
 }
 
 export function RelaxationSuggestionPrompt({
   suggestion,
   onApprove,
   onReject,
+  variant = 'default',
 }: RelaxationSuggestionPromptProps) {
   const [busy, setBusy] = useState(false);
   const targetLabel =
@@ -55,28 +58,37 @@ export function RelaxationSuggestionPrompt({
     }
   }
 
+  const showSalaryComparison =
+    suggestion.target_non_negotiable === 'min_salary';
+
   return (
     <section
       role="region"
       aria-label="Filter relaxation suggestion"
       data-testid="relaxation-suggestion-prompt"
-      className="rounded-card border border-ws-line bg-ws-paper p-5"
+      className={[
+        'rounded-card border border-ws-line p-5',
+        variant === 'card' ? 'bg-ws-card shadow-sm' : 'bg-ws-paper',
+      ].join(' ')}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold text-ws-ink">
-            Your filters may be too strict
+            {variant === 'card' ? targetLabel : 'Your filters may be too strict'}
           </h3>
-          <p className="mt-1 text-sm text-ws-muted">
-            The last scan discarded every job. We suggest relaxing one
-            non-negotiable.
-          </p>
+          {variant === 'default' && (
+            <p className="mt-1 text-sm text-ws-muted">
+              The last scan discarded every job. We suggest relaxing one
+              non-negotiable.
+            </p>
+          )}
         </div>
         <span className="shrink-0 rounded-full border border-ws-line bg-ws-card px-3 py-1 font-mono text-xs text-ws-muted">
           {targetLabel}
         </span>
       </div>
 
+      {showSalaryComparison && (
       <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-ws-line bg-ws-card p-3">
           <dt className="font-mono text-[10px] uppercase tracking-widest text-ws-muted">
@@ -101,6 +113,7 @@ export function RelaxationSuggestionPrompt({
           </dd>
         </div>
       </dl>
+      )}
 
       <p className="mt-3 text-sm text-ws-ink">{suggestion.rationale}</p>
 

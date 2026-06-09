@@ -3,7 +3,6 @@
 import type { Application, ApplicationStatus } from '@worksignal/shared';
 import type { ActionNeededItem } from '../types';
 import { formatSentDate } from '../../pipeline/lib/format';
-import { StatusBadge } from '../../pipeline/components/StatusBadge';
 import { DecisionKanbanCard } from './DecisionKanbanCard';
 
 const PIPELINE_COLUMNS: { id: ApplicationStatus; label: string }[] = [
@@ -19,6 +18,15 @@ const OTHER_STATUSES: ApplicationStatus[] = [
   'needs_review',
   'delivery_failed',
 ];
+
+const COLUMN_HEADER_CLASS: Partial<Record<ApplicationStatus | 'needs_decision', string>> = {
+  needs_decision: 'text-indigo-600',
+  sent: 'text-gray-600',
+  opened: 'text-gray-600',
+  callback: 'text-emerald-600',
+  rejected: 'text-red-500',
+  ghosted: 'text-gray-400',
+};
 
 export interface PipelineKanbanProps {
   applications: Application[];
@@ -94,13 +102,13 @@ export function PipelineKanban({
           Tracking {totalCount} application{totalCount === 1 ? '' : 's'}
         </p>
       </div>
-      <div className="grid min-w-0 grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-2.5 sm:p-4 md:grid-cols-4 lg:grid-cols-[minmax(0,1.35fr)_repeat(6,minmax(0,1fr))] lg:gap-2">
+      <div className="grid min-w-0 w-full grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-2.5 sm:p-4 md:grid-cols-4 lg:grid-cols-[minmax(0,1.35fr)_repeat(5,minmax(0,1fr))] lg:gap-2">
         <div
           className="flex min-w-0 flex-col rounded-xl bg-ws-paper/80"
           data-testid="kanban-column-needs_decision"
         >
           <div className="flex items-start justify-between gap-1 px-2 py-2 sm:px-2.5">
-            <span className="font-mono text-[9px] uppercase leading-tight tracking-[0.1em] text-ws-muted lg:text-[10px]">
+            <span className="font-mono text-[9px] uppercase leading-tight tracking-[0.1em] text-indigo-600 lg:text-[10px]">
               Needs Decision
             </span>
             <span className="rounded-full bg-ws-line/60 px-2 py-0.5 text-xs font-medium text-ws-ink">
@@ -143,7 +151,12 @@ export function PipelineKanban({
               data-testid={`kanban-column-${col.id}`}
             >
               <div className="flex items-center justify-between gap-1 px-2 py-2 sm:px-2.5">
-                <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ws-muted lg:text-[10px]">
+                <span
+                  className={[
+                    'font-mono text-[9px] uppercase tracking-[0.1em] lg:text-[10px]',
+                    COLUMN_HEADER_CLASS[col.id] ?? 'text-ws-muted',
+                  ].join(' ')}
+                >
                   {col.label}
                 </span>
                 <span className="rounded-full bg-ws-line/60 px-2 py-0.5 text-xs font-medium text-ws-ink">
@@ -161,18 +174,15 @@ export function PipelineKanban({
                     }
                     className="min-w-0 rounded-lg border border-ws-line bg-ws-card p-2.5 text-left shadow-sm transition hover:border-ws-teal/40 hover:shadow-md sm:p-3"
                   >
-                    <p className="truncate text-sm font-semibold text-ws-ink">
+                    <p className="text-sm font-semibold leading-snug text-ws-ink">
                       {app.company}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-ws-muted">
+                    <p className="mt-0.5 text-xs leading-snug text-ws-muted">
                       {app.role_title}
                     </p>
-                    <div className="mt-2 flex min-w-0 items-center justify-between gap-1">
-                      <span className="min-w-0 truncate font-mono text-[10px] text-ws-muted">
-                        {formatSentDate(app)}
-                      </span>
-                      <StatusBadge status={app.status} className="shrink-0" />
-                    </div>
+                    <p className="mt-2 truncate font-mono text-[10px] text-ws-muted">
+                      {formatSentDate(app)}
+                    </p>
                   </button>
                 ))}
               </div>
