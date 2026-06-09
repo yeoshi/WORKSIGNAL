@@ -65,7 +65,7 @@ Output JSON:
  * and `work_life_flags` (Req 10.3).
  */
 export function buildRealismPrompt(job: Job, user: UserConfig): string {
-  const threshold = user.agent_weights.realism_threshold;
+  const threshold = user.agent_weights?.realism_threshold ?? 80;
   return [
     formatUser(user),
     '',

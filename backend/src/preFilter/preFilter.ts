@@ -93,8 +93,9 @@ function employmentTypeAllowed(job: DiscoveredJob, user: UserConfig): boolean {
  *  - `fully_remote` — only fully-remote jobs are compatible.
  *  - `hybrid_remote` — hybrid or fully-remote jobs are compatible; onsite is not.
  *
- * Unknown / unclassifiable job arrangements are treated as incompatible with a
- * restrictive preference (fail-closed) so a violation is never passed.
+ * When the job's arrangement is unclassifiable (e.g. MCF doesn't expose this
+ * field and mapMcfJob defaults to 'any'), we cannot confirm a violation — so
+ * we pass it through and let the debate agents evaluate it instead.
  */
 function workArrangementCompatible(job: DiscoveredJob, user: UserConfig): boolean {
   const preference = user.non_negotiables.work_arrangement;
@@ -102,6 +103,12 @@ function workArrangementCompatible(job: DiscoveredJob, user: UserConfig): boolea
     return true;
   }
   const category = classifyJobArrangement(job.work_arrangement);
+  // Unknown means the source (e.g. MCF) didn't provide arrangement data.
+  // Pass it through — blocking jobs we have no arrangement data on would
+  // discard most MCF listings since MCF doesn't expose this field.
+  if (category === 'unknown') {
+    return true;
+  }
   if (preference === 'fully_remote') {
     return category === 'fully_remote';
   }
@@ -135,7 +142,7 @@ function locationAcceptable(job: DiscoveredJob): boolean {
  */
 function customDealbreakerMatched(job: DiscoveredJob, user: UserConfig): boolean {
   const haystack = `${job.company}\n${job.role_title}\n${job.jd_text}`.toLowerCase();
-  return user.non_negotiables.custom.some((dealbreaker) => {
+  return (user.non_negotiables.custom ?? []).some((dealbreaker) => {
     const needle = dealbreaker.trim().toLowerCase();
     return needle.length > 0 && haystack.includes(needle);
   });

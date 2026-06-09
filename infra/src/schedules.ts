@@ -6,14 +6,13 @@
  * the concrete Step Functions machine / Lambdas in later tasks (19.1).
  *
  * Cadence (design: Scheduling table):
- * - Every 3 hours   → WorkSignal-Debate-Machine (scan → debate)   (Req 7.1)
+ * - Daily 00:00 SGT → WorkSignal-Debate-Machine (scan → debate)   (Req 7.1)
  * - Every 30 minutes→ Gmail_Monitor Lambda                        (Req 18.1)
  * - Weekly Sun 09:00 SGT → Recalibration flow                     (Req 21.1)
  *
- * Each schedule fires on a fixed cadence, but execution is **scoped per user**
- * and gated on elapsed-time semantics (the handler checks the user's
- * `last_scan_at` / each application's `sent_at`) so behaviour is correct even
- * if a schedule fires more frequently than the logical interval.
+ * Each schedule fires on a fixed cadence, but execution is **scoped per user**.
+ * The debate scan still checks the user's persisted `last_scan_at`, and the
+ * other handlers continue to enforce their own elapsed-time semantics.
  */
 import { AWS_REGION } from '@worksignal/shared';
 import { DEBATE_MACHINE_NAME } from './debateMachine.js';
@@ -71,16 +70,16 @@ export interface ScheduleRuleDefinition {
   readonly requirement: string;
 }
 
-/** 3-hourly trigger for the scan → debate Step Functions workflow (Req 7.1). */
+/** Daily 00:00 SGT trigger for the scan → debate Step Functions workflow (Req 7.1). */
 export const debateSchedule: ScheduleRuleDefinition = {
   logicalId: 'WorkSignalDebateSchedule',
   region: AWS_REGION,
-  description: 'Every 3 hours: trigger WorkSignal-Debate-Machine (scan → debate), gated per user on last_scan_at.',
-  scheduleExpression: 'rate(3 hours)',
+  description: 'Daily at 00:00 SGT: trigger WorkSignal-Debate-Machine (scan → debate), gated per user on last_scan_at.',
+  scheduleExpression: 'cron(0 0 * * ? *)',
   timezone: 'Asia/Singapore',
   enabled: true,
-  // Fires every 3 hours, but the workflow gates each user on `last_scan_at`
-  // so the 3-hour elapsed-time semantics hold per user (Req 7.1).
+  // Fires daily at midnight Singapore time; the workflow still gates each user
+  // on `last_scan_at` so duplicate invocations remain safe (Req 7.1).
   target: {
     kind: 'state-machine',
     logicalId: DEBATE_MACHINE_NAME,
