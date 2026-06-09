@@ -52,11 +52,13 @@ import { runRiskAgent } from '../debate/agents/risk.js';
 import { runOpportunityAgent } from '../debate/agents/opportunity.js';
 import { resolveDecision } from '../orchestrator/decisionTree.js';
 import type { BedrockInvoke, BedrockRequest, ExaClient } from '../debate/agents/shared.js';
+import { createMcfSearch, type RawMcfJob } from '../discovery/opportunityScanner.js';
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const REGION = process.env.AWS_DEFAULT_REGION || process.env.AWS_REGION || 'us-east-1';
 const MODEL_ID = process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-sonnet-4-6';
+const EXA_API_KEY = process.env.EXA_API_KEY ?? '';
 
 // ─── Real Bedrock Client ────────────────────────────────────────────────────
 
@@ -82,23 +84,41 @@ const bedrockInvoke: BedrockInvoke = async (request: BedrockRequest): Promise<st
     return responseBody.content[0].text;
 };
 
-// ─── Fake Exa Client (for Risk agent research) ─────────────────────────────
+// ─── Real Exa Client (for Risk agent research) ─────────────────────────────
 
 const exaClient: ExaClient = async (query: string) => {
     console.log(`  [Exa] Research query: "${query}"`);
-    // Return some simulated research results
-    return [
-        {
-            title: 'Grab reports Q1 2025 profitability milestone',
-            url: 'https://techcrunch.com/2025/03/15/grab-q1-profitability',
-            text: 'Grab Holdings reported its first full-quarter operating profit in Q1 2025, with revenue up 18% YoY.',
+    if (!EXA_API_KEY) {
+        console.warn('  [Exa] EXA_API_KEY not set — returning empty results');
+        return [];
+    }
+    const res = await fetch('https://api.exa.ai/search', {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            accept: 'application/json',
+            'x-api-key': EXA_API_KEY,
         },
-        {
-            title: 'Grab engineering hiring surge in Singapore',
-            url: 'https://www.straitstimes.com/business/grab-hiring-200-engineers',
-            text: 'Grab plans to hire 200 engineers in Singapore through 2025 as it expands platform capabilities.',
-        },
-    ];
+        body: JSON.stringify({ query, numResults: 5, type: 'auto', contents: { text: true } }),
+    });
+    if (!res.ok) {
+        throw new Error(`Exa API error: HTTP ${res.status}`);
+    }
+    const data = (await res.json()) as {
+        results?: Array<{ url?: string; title?: string; text?: string | null; publishedDate?: string | null }>;
+    };
+    const results = (data.results ?? []).map((r) => ({
+        url: r.url ?? '',
+        title: r.title,
+        text: r.text ?? undefined,
+        publishedDate: r.publishedDate ?? undefined,
+    }));
+    console.log(`  [Exa] ${results.length} result(s):`);
+    for (const r of results) {
+        console.log(`    • ${r.title ?? '(no title)'}`);
+        console.log(`      ${r.url}`);
+    }
+    return results;
 };
 
 // ─── Sample Job ─────────────────────────────────────────────────────────────
@@ -205,6 +225,23 @@ async function main() {
     console.log(`Region: ${REGION}`);
     console.log(`Job: ${sampleJob.role_title} at ${sampleJob.company}`);
     console.log(`User: ${sampleUser.name} (${sampleUser.career_stage})`);
+
+    // ─── MCF API check ──────────────────────────────────────────────────────
+    divider('MCF (MyCareersFuture) API CHECK');
+    const searchTerm = sampleUser.profile?.target_roles?.[0] ?? 'Software Engineer';
+    console.log(`\nSearching MCF for: "${searchTerm}" (limit 5)`);
+    try {
+        const mcfSearch = createMcfSearch(fetch as unknown as Parameters<typeof createMcfSearch>[0]);
+        const mcfJobs = await mcfSearch({ search: searchTerm, limit: 5 }) as RawMcfJob[];
+        console.log(`\nMCF returned ${mcfJobs.length} job(s):`);
+        for (const job of mcfJobs.slice(0, 5)) {
+            const company = job.postedCompany?.name ?? job.hiringCompany?.name ?? '(unknown company)';
+            console.log(`  • ${job.title ?? '(no title)'} — ${company}`);
+            if (job.uuid) console.log(`    https://www.mycareersfuture.gov.sg/job/${job.uuid}`);
+        }
+    } catch (err) {
+        console.error(`  MCF API error: ${String(err)}`);
+    }
 
     divider('INVOKING 4 DEBATE AGENTS IN PARALLEL');
 
