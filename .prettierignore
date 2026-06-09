@@ -1,0 +1,10 @@
+node_modules
+dist
+.next
+cdk.out
+coverage
+package-lock.json
+
+# Documentation and spec files (managed separately, not subject to code formatting)
+.kiro
+PRD-WORKSIGNAL-Full.md

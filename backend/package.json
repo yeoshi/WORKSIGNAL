@@ -1,0 +1,14 @@
+{
+  "name": "@worksignal/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@worksignal/shared": "*"
+  }
+}
