@@ -27,7 +27,8 @@ export * from './orchestrator/decisionTree.js';
 // --- Debate pure-logic modules ---
 export * from './debate/verdictValidator.js';
 
-// --- Pre_Filter relaxation logic ---
+// --- Pre_Filter logic ---
+export * from './preFilter/preFilter.js';
 export * from './preFilter/relaxation.js';
 
 // --- Inbox monitoring pure-logic modules ---

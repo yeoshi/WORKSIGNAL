@@ -10,7 +10,9 @@ import { NetworkModal } from './components/NetworkModal';
 import { BriefModal } from './components/BriefModal';
 import { IssuesModal } from './components/IssuesModal';
 import { JobDetailModal } from './components/JobDetailModal';
+import { AgentRunModal } from './components/AgentRunModal';
 import { useDashboardData } from './useDashboardData';
+import { useAgentRun } from './hooks/useAgentRun';
 import { usePipeline } from '../pipeline/hooks/usePipeline';
 import { useKanbanActions } from './hooks/useKanbanActions';
 import { Metric } from '../../components/ui/Metric';
@@ -34,8 +36,11 @@ export default function DashboardPage() {
   const [networkOpen, setNetworkOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
   const [issuesOpen, setIssuesOpen] = useState(false);
+  const [agentRunOpen, setAgentRunOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobShowActions, setSelectedJobShowActions] = useState(false);
+
+  const agentRun = useAgentRun(reload);
 
   const actionNeeded = data?.action_needed ?? [];
 
@@ -108,6 +113,8 @@ export default function DashboardPage() {
             agentStatus={data.agent_status}
             issueCount={issueCount}
             onOpenIssues={() => setIssuesOpen(true)}
+            onRunAgent={() => { setAgentRunOpen(true); agentRun.start(); }}
+            agentRunning={agentRun.state === 'running'}
           />
 
           <div className="grid min-w-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,26%)] lg:gap-5">
@@ -198,6 +205,12 @@ export default function DashboardPage() {
         onClose={handleCloseJob}
         onSkipJob={selectedJobShowActions ? handleModalSkip : undefined}
         onSendJob={selectedJobShowActions ? handleModalSend : undefined}
+      />
+      <AgentRunModal
+        open={agentRunOpen}
+        state={agentRun.state}
+        events={agentRun.events}
+        onClose={() => { setAgentRunOpen(false); agentRun.reset(); }}
       />
     </main>
   );

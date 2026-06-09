@@ -20,12 +20,16 @@ export interface DashboardHeaderProps {
   agentStatus: AgentStatusSummary;
   issueCount: number;
   onOpenIssues: () => void;
+  onRunAgent?: () => void;
+  agentRunning?: boolean;
 }
 
 export function DashboardHeader({
   agentStatus,
   issueCount,
   onOpenIssues,
+  onRunAgent = () => {},
+  agentRunning = false,
 }: DashboardHeaderProps) {
   const { data: session } = useSession();
   const firstName = getFirstName(session?.user?.name);
@@ -49,6 +53,35 @@ export function DashboardHeader({
       </div>
 
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-3 sm:gap-4">
+        {/* Run WorkSignal Agent */}
+        <button
+          type="button"
+          data-testid="run-agent-button"
+          onClick={onRunAgent}
+          disabled={agentRunning}
+          className={[
+            'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition',
+            agentRunning
+              ? 'cursor-not-allowed border-ws-teal/40 bg-ws-teal/10 text-ws-teal'
+              : 'border-ws-line bg-ws-card text-ws-ink hover:border-ws-teal/50 hover:bg-ws-paper',
+          ].join(' ')}
+          aria-label="Run WorkSignal agent pipeline"
+        >
+          {agentRunning ? (
+            <>
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-ws-teal border-t-transparent" />
+              Running…
+            </>
+          ) : (
+            <>
+              <svg aria-hidden className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
+              </svg>
+              Run Agent
+            </>
+          )}
+        </button>
+
         <div
           className="flex min-w-0 max-w-full items-center gap-2"
           data-testid="agent-status-inline"
