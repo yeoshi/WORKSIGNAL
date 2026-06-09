@@ -8,11 +8,15 @@
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
+import { DEMO_MODE, demoJobDetail } from '../../lib/demoData';
 
 export async function GET(
     _request: NextRequest,
     { params }: { params: { jobId: string } },
 ) {
+    if (DEMO_MODE) {
+        return Response.json(demoJobDetail);
+    }
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
 

@@ -6,7 +6,9 @@
  */
 
 import type { AgentName, AgentAccuracy } from '@worksignal/shared';
-import { AGENT_NAMES } from '@worksignal/shared';
+
+/** Inline the agent names to avoid pulling node:crypto via the shared barrel export. */
+const AGENT_NAMES: AgentName[] = ['ambition', 'realism', 'risk', 'opportunity'];
 
 export interface AgentAccuracyDisplayProps {
     agentPerformance: Record<AgentName, AgentAccuracy>;

@@ -6,7 +6,9 @@ import type {
   RiskVerdict,
   VerdictSet,
 } from '@worksignal/shared';
-import { AGENT_NAMES } from '@worksignal/shared';
+
+/** Inline agent names to avoid pulling node:crypto via the shared barrel export. */
+const AGENT_NAMES: AgentName[] = ['ambition', 'realism', 'risk', 'opportunity'];
 
 /**
  * Per-agent presentation theme for the Job Detail debate cards.
