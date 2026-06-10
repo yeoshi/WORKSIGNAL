@@ -1,4 +1,4 @@
-import type { EnrichedMasterDecision, Job, MasterDecision, Materials, VerdictSet } from '@worksignal/shared';
+import type { EnrichedMasterDecision, Job, MasterDecision, Materials, VerdictSet } from '@/app/types/shared';
 
 /**
  * The full data payload backing the Job Detail hero screen.

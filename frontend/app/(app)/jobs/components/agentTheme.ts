@@ -5,7 +5,7 @@ import type {
   RealismVerdict,
   RiskVerdict,
   VerdictSet,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 
 /** Inline agent names to avoid pulling node:crypto via the shared barrel export. */
 const AGENT_NAMES: AgentName[] = ['ambition', 'realism', 'risk', 'opportunity'];

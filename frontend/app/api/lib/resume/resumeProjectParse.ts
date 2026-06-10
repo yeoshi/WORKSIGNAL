@@ -1,4 +1,4 @@
-import type { ProjectEntry, WorkExperienceEntry } from '@worksignal/shared';
+import type { ProjectEntry, WorkExperienceEntry } from '@/app/types/shared';
 
 function isBullet(line: string): boolean {
   return /^[•\-*]\s/.test(line);

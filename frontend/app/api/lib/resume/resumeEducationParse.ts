@@ -1,4 +1,4 @@
-import type { EducationEntry, HonorAwardEntry } from '@worksignal/shared';
+import type { EducationEntry, HonorAwardEntry } from '@/app/types/shared';
 import { MONTH, parseDateRange } from './resumeDateUtils';
 
 const DEGREE_LINE =

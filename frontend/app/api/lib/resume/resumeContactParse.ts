@@ -1,4 +1,4 @@
-import type { SnsLinkEntry } from '@worksignal/shared';
+import type { SnsLinkEntry } from '@/app/types/shared';
 
 const EMAIL_REGEX = /[\w.+-]+@[\w-]+\.[\w.-]+/;
 const PHONE_REGEX =

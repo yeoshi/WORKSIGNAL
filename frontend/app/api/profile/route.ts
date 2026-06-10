@@ -9,7 +9,7 @@ export async function GET() {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper, S3Helper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         const record = await db.get('Users', { user_id: user.userId });

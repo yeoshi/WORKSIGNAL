@@ -1,6 +1,6 @@
 'use client';
 
-import type { Application, ApplicationStatus } from '@worksignal/shared';
+import type { Application, ApplicationStatus } from '@/app/types/shared';
 import type { ActionNeededItem } from '../types';
 import { formatSentDate } from '../../pipeline/lib/format';
 import { DecisionKanbanCard } from './DecisionKanbanCard';

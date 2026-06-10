@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     if (!jobId) return Response.json({ error: 'job_id required' }, { status: 400 });
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         const [job, userRecord] = await Promise.all([

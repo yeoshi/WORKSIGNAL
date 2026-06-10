@@ -1,4 +1,4 @@
-import type { NetworkConnectionType } from '@worksignal/shared';
+import type { NetworkConnectionType } from '@/app/types/shared';
 
 export interface ConnectionTypeBadgeProps {
   type: NetworkConnectionType;

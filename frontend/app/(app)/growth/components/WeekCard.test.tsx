@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { WeekCard } from './WeekCard';
-import type { RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapWeek } from '@/app/types/shared';
 
 const mockWeek: RoadmapWeek = {
   week: 2,

@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 import { loadPipelineWithRetry } from '../lib/fetchPipeline';
 
 export interface UsePipelineResult {

@@ -3,7 +3,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RelatedEventsSection } from './RelatedEventsSection';
-import type { NetworkingOpportunity } from '@worksignal/shared';
+import type { NetworkingOpportunity } from '@/app/types/shared';
 
 const mockEvents: NetworkingOpportunity[] = [
   {

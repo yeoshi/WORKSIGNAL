@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import { parseResumeText } from './localResumeParser';
 
 export { emptyParsedProfile } from '../../onboarding/lib/parsedProfileDefaults';

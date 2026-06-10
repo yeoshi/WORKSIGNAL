@@ -10,7 +10,7 @@ import {
   type EmploymentType,
   type PriorityFactor,
   type WorkArrangement,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import {
   Button,
   CheckboxGroup,

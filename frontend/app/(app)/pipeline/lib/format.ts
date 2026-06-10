@@ -2,7 +2,7 @@
  * Small display helpers for the Pipeline view.
  */
 
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 import { formatShortDate } from '../../../lib/formatDate';
 
 /**

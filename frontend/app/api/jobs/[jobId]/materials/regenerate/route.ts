@@ -16,7 +16,7 @@ export async function POST(
   const { jobId } = params;
 
   try {
-    const { DynamoDBWrapper } = await import('@worksignal/shared');
+    const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
     const db = new DynamoDBWrapper();
 
     const job = await db.get('Jobs', { job_id: jobId });

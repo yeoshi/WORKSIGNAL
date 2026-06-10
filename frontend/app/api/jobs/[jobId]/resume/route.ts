@@ -37,7 +37,7 @@ export async function POST(
             );
         }
 
-        const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper, S3Helper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         // Verify job belongs to this user.

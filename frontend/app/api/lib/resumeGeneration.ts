@@ -26,7 +26,7 @@ export interface ResumePromptInput extends ResumeGenerationContext {
 export async function loadBaseResumeContext(
   userId: string,
 ): Promise<BaseResumeContext | null> {
-  const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
+  const { DynamoDBWrapper, S3Helper } = await import('@/app/api/lib/aws');
   const db = new DynamoDBWrapper();
   const user = await db.get<Record<string, unknown>>('Users', { user_id: userId });
   const resumeS3Key = user?.resume_s3_key as string | undefined;

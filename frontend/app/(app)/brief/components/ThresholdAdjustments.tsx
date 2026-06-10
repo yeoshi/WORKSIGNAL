@@ -2,7 +2,7 @@
  * Threshold adjustments list for the Weekly Brief (Req 21.5).
  */
 
-import type { AgentName, RecalibrationAdjustment } from '@worksignal/shared';
+import type { AgentName, RecalibrationAdjustment } from '@/app/types/shared';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { AGENT_THEME } from '../../jobs/components/agentTheme';
 

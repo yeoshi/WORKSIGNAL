@@ -11,7 +11,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { SummaryMetrics } from './SummaryMetrics';
-import type { RecalibrationMetrics } from '@worksignal/shared';
+import type { RecalibrationMetrics } from '@/app/types/shared';
 
 const mockMetrics: RecalibrationMetrics = {
     applications_sent: 12,

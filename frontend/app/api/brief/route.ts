@@ -16,7 +16,7 @@ export async function GET() {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         // Query the RecalibrationLog for the user's most recent entry.

@@ -8,7 +8,7 @@ import {
   createOnboardingServiceForRequest,
   loadOnboardingUser,
 } from '../../lib/onboardingPersistence';
-import type { NonNegotiables, PriorityFactor } from '@worksignal/shared';
+import type { NonNegotiables, PriorityFactor } from '@/app/types/shared';
 
 interface TargetsPayload {
   target_roles: string[];

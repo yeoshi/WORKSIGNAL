@@ -4,7 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import {
   clearLocalUserFields,
@@ -12,6 +12,7 @@ import {
   putLocalUser,
 } from '../../lib/localOnboardingStore';
 import { parseResumePdfLocally } from '../../lib/localResumeParser';
+import { getApiBaseUrl } from '../../lib/apiGateway';
 import { getAwsRegion } from '../../lib/awsRegion';
 
 const LOCAL_RESUME_PREFIX = 'local/resumes';
@@ -59,10 +60,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { uploadResume } = await import(
-      '@worksignal/backend/src/onboarding/resumeUpload.js'
-    );
-    const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
+    const { uploadResume } = await import('../../lib/resumeUpload');
+    const { DynamoDBWrapper, S3Helper } = await import('@/app/api/lib/aws');
 
     const bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -103,18 +102,20 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       try {
-        const { createResumeParser } = await import(
-          '@worksignal/backend/src/onboarding/resumeParser.js'
-        );
-        const { createBedrockTextInvoke } = await import('../../lib/bedrockTextInvoke');
-        const parser = createResumeParser({
-          s3,
-          bedrockInvoke: createBedrockTextInvoke(),
+        const parseRes = await fetch(`${getApiBaseUrl()}/onboarding/resume/parse`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            cookie: request.headers.get('cookie') ?? '',
+          },
+          body: JSON.stringify({ s3Key: result.s3Key }),
         });
-        const parsed = await parser.parse(result.s3Key);
-        if ('current_role' in parsed) {
-          profile = parsed;
-          parseFailed = false;
+        if (parseRes.ok) {
+          const parsed = (await parseRes.json()) as ParsedProfile;
+          if (parsed && 'current_role' in parsed) {
+            profile = parsed;
+            parseFailed = false;
+          }
         } else {
           console.warn(
             '[resume-upload] Bedrock parse returned ParseFailure:',

@@ -1,4 +1,4 @@
-import type { NetworkConnectionType, NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkConnectionType, NetworkSuggestion } from '@/app/types/shared';
 
 export type EnrichedNetworkSuggestion = NetworkSuggestion & {
   reasoning?: string;

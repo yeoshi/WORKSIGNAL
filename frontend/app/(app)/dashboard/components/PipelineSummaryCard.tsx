@@ -1,6 +1,6 @@
 'use client';
 
-import type { ApplicationStatus } from '@worksignal/shared';
+import type { ApplicationStatus } from '@/app/types/shared';
 import type { PipelineSummary } from '../types';
 
 /**

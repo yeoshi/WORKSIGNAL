@@ -5,7 +5,7 @@
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { createOnboardingServiceForRequest } from '../../lib/onboardingPersistence';
-import type { CareerStage, ResidencyStatus } from '@worksignal/shared';
+import type { CareerStage, ResidencyStatus } from '@/app/types/shared';
 
 function friendlyError(message: string): string {
   if (message.includes('security token') || message.includes('ExpiredToken')) {

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PipelineKanban } from './PipelineKanban';
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 import type { ActionNeededItem } from '../types';
 
 function makeApplication(overrides?: Partial<Application>): Application {

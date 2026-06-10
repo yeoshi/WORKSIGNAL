@@ -1,17 +1,13 @@
 /**
  * GET /api/pipeline/[applicationId]/debate — Get original debate for an application (Req 17.4).
- *
- * Authenticated BFF route that fronts the Application_Tracker.getDebate
- * operation. Returns the original agent verdicts and Master decision for a
- * specific application in the user's pipeline.
  */
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../../lib/auth';
-import type { Application } from '@worksignal/shared';
+import { getApiBaseUrl } from '../../../lib/apiGateway';
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: { applicationId: string } },
 ) {
     const user = await getAuthenticatedUser();
@@ -19,25 +15,16 @@ export async function GET(
 
     try {
         const { applicationId } = params;
-        const { createApplicationTracker } = await import(
-            '@worksignal/backend/src/applications/applicationTracker.js'
+        const res = await fetch(
+            `${getApiBaseUrl()}/pipeline/${encodeURIComponent(applicationId)}/debate`,
+            {
+                headers: {
+                    cookie: request.headers.get('cookie') ?? '',
+                },
+            },
         );
-        const tracker = createApplicationTracker();
-
-        // Verify the application belongs to this user by checking the list.
-        // This is a security check — users can only view their own debates.
-        const applications: Application[] = await tracker.list(user.userId);
-        const app = applications.find((a: Application) => a.application_id === applicationId);
-
-        if (!app) {
-            return Response.json(
-                { error: 'Not Found', message: 'Application not found.' },
-                { status: 404 },
-            );
-        }
-
-        const debate = await tracker.getDebate(applicationId);
-        return Response.json(debate);
+        const data = await res.json();
+        return Response.json(data, { status: res.status });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
         const status = message.includes('not found') ? 404 : 500;

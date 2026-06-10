@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Copy, Download, RefreshCw } from 'lucide-react';
-import type { MasterDecision } from '@worksignal/shared';
+import type { MasterDecision } from '@/app/types/shared';
 import { downloadTextFile } from '../lib/downloadTextFile';
 
 const iconButtonClass =

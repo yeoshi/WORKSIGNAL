@@ -2,7 +2,7 @@
  * Per-agent accuracy display for the Weekly Brief (Req 21.5).
  */
 
-import type { AgentName, AgentAccuracy } from '@worksignal/shared';
+import type { AgentName, AgentAccuracy } from '@/app/types/shared';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { AGENT_THEME } from '../../jobs/components/agentTheme';
 import type { BriefGrowthActivity, BriefNetworkActivity } from '../lib/briefTypes';

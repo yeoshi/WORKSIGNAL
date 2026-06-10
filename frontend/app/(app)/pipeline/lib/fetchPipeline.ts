@@ -11,7 +11,7 @@
  * `isCancelled` collaborators are all injectable.
  */
 
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 
 /** Relative BFF endpoint serving the authenticated user's applications. */
 export const PIPELINE_ENDPOINT = '/api/pipeline';

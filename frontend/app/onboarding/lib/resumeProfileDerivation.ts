@@ -1,4 +1,4 @@
-import type { ProjectEntry, WorkExperienceEntry } from '@worksignal/shared';
+import type { ProjectEntry, WorkExperienceEntry } from '@/app/types/shared';
 
 function parseYearMonth(value: string): number | null {
   const trimmed = value.trim();

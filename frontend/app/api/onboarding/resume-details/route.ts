@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { createOnboardingServiceForRequest } from '../../lib/onboardingPersistence';
 

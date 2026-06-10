@@ -7,6 +7,7 @@
  */
 
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
+import { getApiBaseUrl } from '../lib/apiGateway';
 import { DEMO_MODE, DEMO_NETWORK_BY_COMPANY } from '../lib/demo';
 
 export async function GET(request: Request) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         // Query for the user's network suggestions.
@@ -55,22 +56,20 @@ export async function GET(request: Request) {
 
         const [company, applicationCount] = targetCompany;
 
-        // Try to build suggestions on-the-fly using the Network_Agent.
-        const { createNetworkAgent } = await import(
-            '@worksignal/backend/src/network/networkAgent.js'
+        const upstream = await fetch(
+            `${getApiBaseUrl()}/network?company=${encodeURIComponent(company)}`,
+            {
+                headers: {
+                    cookie: request.headers.get('cookie') ?? '',
+                },
+            },
         );
-        const agent = createNetworkAgent({ db });
 
-        try {
-            const suggestionSet = await agent.buildSuggestions(user.userId, company);
-            return Response.json({
-                company: suggestionSet.company,
-                application_count: applicationCount,
-                suggestions: suggestionSet.suggestions,
-                upcoming_events: suggestionSet.upcoming_events,
-            });
-        } catch {
-            // If building fails (e.g. no Exa client), return basic info.
+        if (upstream.status === 204) {
+            return new Response(null, { status: 204 });
+        }
+
+        if (!upstream.ok) {
             return Response.json({
                 company,
                 application_count: applicationCount,
@@ -78,6 +77,8 @@ export async function GET(request: Request) {
                 upcoming_events: [],
             });
         }
+
+        return Response.json(await upstream.json());
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
         return Response.json({ error: 'Error', message }, { status: 500 });

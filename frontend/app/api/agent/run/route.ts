@@ -1,19 +1,12 @@
 /**
  * GET /api/agent/run — Server-Sent Events stream of the full WorkSignal pipeline.
  *
- * Runs: MCF scan → pre-filter → 4-agent Bedrock debate → DynamoDB persist.
- * Each step emits a structured JSON event so the frontend can render the live
- * debate log in real-time including per-agent reasoning.
- *
- * SSE event format:  data: <JSON>\n\n
- * The stream closes when the pipeline completes or errors.
+ * Proxies to the AWS API Gateway backend; the frontend does not run agent logic.
  */
 
-import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
+import { getApiBaseUrl } from '../../lib/apiGateway';
 import { DEMO_MODE } from '../../lib/demo';
-
-// ── SSE event shapes ────────────────────────────────────────────────────────
 
 export type AgentName = 'ambition' | 'realism' | 'risk' | 'opportunity';
 
@@ -37,11 +30,8 @@ export type AgentRunEvent =
         type: 'orchestrator_reasoning';
         job_id: string;
         title: string;
-        /** The deterministic decision class before enrichment (e.g. deadlock_escalate). */
         base_decision: string;
-        /** Score snapshot for each agent: verdict/score string, e.g. "apply/72". */
         scores: { ambition: string; realism: string; risk: string; opportunity: string };
-        /** The heuristic-resolved action. */
         action: 'apply' | 'upskill' | 'hold';
         confidence: number;
         deciding_factor: string;
@@ -52,9 +42,7 @@ export type AgentRunEvent =
     | { type: 'run_complete'; scanned: number; survivors: number; debated: number; elapsed_s: number; tally: Record<string, number> }
     | { type: 'error'; message: string };
 
-// ── GET handler ─────────────────────────────────────────────────────────────
-
-export async function GET() {
+export async function GET(request: Request) {
     if (DEMO_MODE) {
         return Response.json({ error: 'Not available in demo mode' }, { status: 400 });
     }
@@ -62,363 +50,20 @@ export async function GET() {
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
 
-    const encoder = new TextEncoder();
-    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-    const writer = writable.getWriter();
-
-    const emit = async (event: AgentRunEvent) => {
-        try {
-            await writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        } catch {
-            // client disconnected — silently ignore
-        }
-    };
-
-    // Run pipeline in background; stream stays open until it completes.
-    runPipeline(user.userId, user.name ?? 'User', emit)
-        .catch(async (err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            await emit({ type: 'error', message: msg });
-        })
-        .finally(() => writer.close());
-
-    return new Response(readable, {
+    const upstream = await fetch(`${getApiBaseUrl()}/agent/run`, {
         headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache, no-transform',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',
+            cookie: request.headers.get('cookie') ?? '',
+            accept: 'text/event-stream',
         },
     });
-}
 
-// ── Pipeline ────────────────────────────────────────────────────────────────
-
-async function runPipeline(
-    userId: string,
-    userName: string,
-    emit: (e: AgentRunEvent) => Promise<void>,
-): Promise<void> {
-    const { randomUUID } = await import('node:crypto');
-    const runId = randomUUID();
-
-    await emit({ type: 'start', run_id: runId, user_name: userName });
-
-    // Lazy imports — AWS SDK needs env vars set before use.
-    const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const [
-        { createOpportunityScanner },
-        { preFilter },
-        { runAmbitionAgent },
-        { runRealismAgent },
-        { runRiskAgent },
-        { runOpportunityAgent },
-        { persistAgentVerdicts },
-        { hasAnyValidVerdict },
-        { resolveEnriched },
-        { isInvalidVerdict },
-    ] = await Promise.all([
-        import('@worksignal/backend/src/discovery/opportunityScanner.js'),
-        import('@worksignal/backend/src/preFilter/preFilter.js'),
-        import('@worksignal/backend/src/debate/agents/ambition.js'),
-        import('@worksignal/backend/src/debate/agents/realism.js'),
-        import('@worksignal/backend/src/debate/agents/risk.js'),
-        import('@worksignal/backend/src/debate/agents/opportunity.js'),
-        import('@worksignal/backend/src/debate/verdictPersistence.js'),
-        import('@worksignal/backend/src/orchestrator/degradedResolution.js'),
-        import('@worksignal/backend/src/orchestrator/resolveEnriched.js'),
-        import('@worksignal/backend/src/debate/verdictValidator.js'),
-    ]);
-    const { generateAndPersistJobMaterials, shouldGenerateJobMaterials } = await import('../../lib/jobMaterialsGeneration');
-    const { serializeUserProfileFromRecord } = await import('../../lib/serializeUserProfile');
-
-    const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
-    const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
-    const EXA_KEY = process.env.EXA_API_KEY ?? '';
-
-    // ── Bedrock client ──────────────────────────────────────────────────────
-    const bedrockClient = new BedrockRuntimeClient({
-        region: REGION,
-        credentials: process.env.AWS_ACCESS_KEY_ID ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-            sessionToken: process.env.AWS_SESSION_TOKEN,
-        } : undefined,
-    });
-
-    const bedrock = async (req: { system: string; user: string }): Promise<string> => {
-        const cmd = new InvokeModelCommand({
-            modelId: MODEL_ID,
-            contentType: 'application/json',
-            accept: 'application/json',
-            body: new TextEncoder().encode(JSON.stringify({
-                anthropic_version: 'bedrock-2023-05-31',
-                max_tokens: 2048,
-                system: req.system,
-                messages: [{ role: 'user', content: req.user }],
-            })),
-        });
-        const res = await bedrockClient.send(cmd);
-        const body = JSON.parse(new TextDecoder().decode(res.body)) as { content: Array<{ text: string }> };
-        const text = body.content[0]?.text;
-        if (text === undefined) throw new Error('Bedrock response missing content[0].text');
-        return text;
-    };
-
-    // Exa client that emits research events
-    const exa = async (query: string): Promise<Array<{ url: string; title?: string }>> => {
-        if (!EXA_KEY) return [];
-        await emit({ type: 'exa_research', query });
-        try {
-            const res = await fetch('https://api.exa.ai/search', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json', accept: 'application/json', 'x-api-key': EXA_KEY },
-                body: JSON.stringify({ query, numResults: 3, type: 'auto', contents: { text: false } }),
-            });
-            if (!res.ok) return [];
-            const data = await res.json() as { results?: Array<{ url?: string; title?: string }> };
-            return (data.results ?? []).map((r) => ({ url: r.url ?? '', title: r.title }));
-        } catch {
-            return [];
-        }
-    };
-
-    const db = new DynamoDBWrapper();
-
-    // ── Load user record ────────────────────────────────────────────────────
-    const rawUser = await db.get('Users', { user_id: userId });
-    if (!rawUser) throw new Error('User not found in DynamoDB — run the seed script first.');
-    const userConfig = rawUser as unknown as Parameters<typeof preFilter>[1];
-
-    // ── STEP 1: Scan ────────────────────────────────────────────────────────
-    console.log(`[AgentRun] ─────────────────────────────────────────`);
-    console.log(`[AgentRun] 🚀 Pipeline started — run_id: ${runId} | user: ${userName} (${userId})`);
-    await emit({ type: 'scan_start' });
-    console.log(`[AgentRun] 🔍 Scanning MCF…`);
-    const scanner = createOpportunityScanner({ scanIntervalMs: 0 });
-    const discovered = await scanner.scan(userId);
-
-    const salaryStr = (min: number, max: number) => {
-        if (!min && !max) return 'salary undisclosed';
-        if (!min) return `up to $${max}`;
-        if (!max) return `from $${min}`;
-        return `$${min}–$${max}`;
-    };
-
-    await emit({
-        type: 'scan_complete',
-        count: discovered.length,
-        jobs: discovered.map((j) => ({
-            job_id: j.job_id,
-            title: j.role_title,
-            company: j.company,
-            salary: salaryStr(j.salary_min, j.salary_max),
-            days_old: j.mcf_listing_days,
-        })),
-    });
-
-    if (discovered.length === 0) return;
-
-    // ── STEP 2: Pre-filter ──────────────────────────────────────────────────
-    type DiscoveredJob = (typeof discovered)[0];
-    const survivors: DiscoveredJob[] = [];
-
-    for (const job of discovered) {
-        const result = preFilter(job, userConfig);
-        const reasons = !result.pass ? (result.violated ?? []) : [];
-        await emit({
-            type: 'prefilter_result',
-            job_id: job.job_id,
-            title: job.role_title,
-            company: job.company,
-            pass: result.pass,
-            reasons,
-        });
-        if (result.pass) survivors.push(job);
-    }
-
-    await emit({
-        type: 'prefilter_summary',
-        total: discovered.length,
-        survivors: survivors.length,
-        rejected: discovered.length - survivors.length,
-    });
-
-    if (survivors.length === 0) {
-        await emit({ type: 'all_filtered', suggestion: null });
-        return;
-    }
-
-    // ── STEP 3: Debate ──────────────────────────────────────────────────────
-    const overallStart = Date.now();
-    const tally: Record<string, number> = {};
-
-    for (let idx = 0; idx < survivors.length; idx++) {
-        const job = survivors[idx]!;
-
-        await emit({
-            type: 'debate_start',
-            job_index: idx + 1,
-            total: survivors.length,
-            job_id: job.job_id,
-            title: job.role_title,
-            company: job.company,
-            salary: salaryStr(job.salary_min, job.salary_max),
-        });
-
-        // Run 4 agents in parallel — each emits its own event on completion.
-        const [ambition, realism, risk, opportunity] = await Promise.all([
-            runAmbitionAgent(job, userConfig, bedrock).then(async (r) => {
-                if (!isInvalidVerdict(r)) {
-                    const v = r as { verdict: string; ambition_score: number; reasoning: string; key_argument: string };
-                    await emit({ type: 'agent_result', agent: 'ambition', verdict: v.verdict, score: v.ambition_score, reasoning: v.reasoning, key_argument: v.key_argument });
-                } else {
-                    await emit({ type: 'agent_failed', agent: 'ambition' });
-                }
-                return r;
-            }),
-            runRealismAgent(job, userConfig, bedrock).then(async (r) => {
-                if (!isInvalidVerdict(r)) {
-                    const v = r as { verdict: string; match_score: number; reasoning: string; key_argument: string; key_gaps: string[]; work_life_flags: string[] };
-                    await emit({ type: 'agent_result', agent: 'realism', verdict: v.verdict, score: v.match_score, reasoning: v.reasoning, key_argument: v.key_argument, extra: { gaps: v.key_gaps, wlb_flags: v.work_life_flags } });
-                } else {
-                    await emit({ type: 'agent_failed', agent: 'realism' });
-                }
-                return r;
-            }),
-            runRiskAgent(job, userConfig, bedrock, exa).then(async (r) => {
-                if (!isInvalidVerdict(r)) {
-                    const v = r as { verdict: string; risk_score: number; reasoning: string; key_argument: string; red_flags: Array<{ flag: string; severity: string; source?: string }>; glassdoor_score: number | null };
-                    await emit({ type: 'agent_result', agent: 'risk', verdict: v.verdict, score: v.risk_score, reasoning: v.reasoning, key_argument: v.key_argument, extra: { red_flags: v.red_flags, glassdoor_score: v.glassdoor_score } });
-                } else {
-                    await emit({ type: 'agent_failed', agent: 'risk' });
-                }
-                return r;
-            }),
-            runOpportunityAgent(job, userConfig, bedrock).then(async (r) => {
-                if (!isInvalidVerdict(r)) {
-                    const v = r as { verdict: string; urgency_score: number; reasoning: string; key_argument: string; timing_factors: string[] };
-                    await emit({ type: 'agent_result', agent: 'opportunity', verdict: v.verdict, score: v.urgency_score, reasoning: v.reasoning, key_argument: v.key_argument, extra: { timing_factors: v.timing_factors } });
-                } else {
-                    await emit({ type: 'agent_failed', agent: 'opportunity' });
-                }
-                return r;
-            }),
-        ]);
-
-        // ── Persist 4 verdicts → DynamoDB AgentVerdicts ────────────────────
-        console.log(`[AgentRun] ⏳ Persisting verdicts: "${job.role_title}" @ ${job.company} (${job.job_id})`);
-        await emit({ type: 'db_persist', step: 'verdicts', job_id: job.job_id, title: job.role_title });
-
-        const persistResult = await persistAgentVerdicts(
-            {
-                job_id: job.job_id,
-                user_id: userId,
-                outputs: { ambition, realism, risk, opportunity },
-            },
-            { db },
-        );
-
-        const storedAgents = (Object.keys(persistResult.verdicts) as string[]);
-        console.log(`[AgentRun] ✓ AgentVerdicts written — verdict_id: ${persistResult.verdict_id} | agents: [${storedAgents.join(', ')}]${persistResult.agent_failures.length > 0 ? ` | failures: [${persistResult.agent_failures.join(', ')}]` : ''}`);
-
-        // ── Resolve master decision (enriched) + update same record ───────
-        const verdictSet = persistResult.verdicts;
-
-        if (!hasAnyValidVerdict(verdictSet)) {
-            console.log(`[AgentRun] ⚠ No master decision (no valid verdicts for ${job.job_id})`);
-            tally['no_decision'] = (tally['no_decision'] ?? 0) + 1;
-            await emit({ type: 'debate_result', job_id: job.job_id, title: job.role_title, company: job.company, decision: 'no_decision', summary: null, verdict_id: persistResult.verdict_id });
-            continue;
-        }
-
-        const enriched = await resolveEnriched({ verdicts: verdictSet, user: userConfig, job, bedrock });
-        const decision = enriched;
-        const dec = decision.decision ?? 'no_decision';
-
-        // Emit orchestrator reasoning event when the reasoning pass fired
-        if (enriched.orchestrator_verdict) {
-            const ov = enriched.orchestrator_verdict;
-            const scores = {
-                ambition:    verdictSet.ambition    ? `${verdictSet.ambition.verdict}/${verdictSet.ambition.ambition_score}`       : 'missing',
-                realism:     verdictSet.realism     ? `${verdictSet.realism.verdict}/${verdictSet.realism.match_score}`            : 'missing',
-                risk:        verdictSet.risk        ? `${verdictSet.risk.verdict}/${verdictSet.risk.risk_score}`                   : 'missing',
-                opportunity: verdictSet.opportunity ? `${verdictSet.opportunity.verdict}/${verdictSet.opportunity.urgency_score}`  : 'missing',
-            };
-            await emit({
-                type: 'orchestrator_reasoning',
-                job_id: job.job_id,
-                title: job.role_title,
-                base_decision: dec,
-                scores,
-                action: ov.action,
-                confidence: ov.confidence,
-                deciding_factor: ov.deciding_factor,
-                holistic_summary: ov.holistic_summary,
-                ...(ov.apply_angle && { apply_angle: ov.apply_angle }),
-                ...(ov.upskill_targets && { upskill_targets: ov.upskill_targets }),
-            });
-        }
-
-        console.log(`[AgentRun] ⏳ Writing master_decision: "${dec}" → verdict_id: ${persistResult.verdict_id}`);
-        await emit({ type: 'db_persist', step: 'master_decision', job_id: job.job_id, title: job.role_title, verdict_id: persistResult.verdict_id, decision: dec, stored_agents: storedAgents });
-
-        await db.update(
-            'AgentVerdicts',
-            { verdict_id: persistResult.verdict_id },
-            {
-                UpdateExpression: 'SET master_decision = :md',
-                ExpressionAttributeValues: { ':md': decision },
-            },
-        );
-        console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
-
-        if (shouldGenerateJobMaterials(dec)) {
-            console.log(`[AgentRun] ⏳ Generating application materials for ${job.job_id}`);
-            await emit({ type: 'materials_start', job_id: job.job_id, title: job.role_title });
-            try {
-                const userProfile = serializeUserProfileFromRecord(rawUser as Record<string, unknown>);
-                await generateAndPersistJobMaterials({
-                    userId,
-                    jobId: job.job_id,
-                    verdictId: persistResult.verdict_id,
-                    job: job as unknown as Record<string, unknown>,
-                    decision: decision as unknown as Record<string, unknown>,
-                    userProfile,
-                });
-                console.log(`[AgentRun] ✓ Application materials saved for ${job.job_id}`);
-                await emit({ type: 'materials_complete', job_id: job.job_id, title: job.role_title });
-            } catch (materialsError) {
-                const msg = materialsError instanceof Error ? materialsError.message : 'Materials generation failed';
-                console.warn(`[AgentRun] ⚠ Materials generation failed for ${job.job_id}:`, msg);
-                await emit({ type: 'materials_failed', job_id: job.job_id, title: job.role_title, message: msg });
-            }
-        }
-
-        tally[dec] = (tally[dec] ?? 0) + 1;
-
-        await emit({
-            type: 'debate_result',
-            job_id: job.job_id,
-            title: job.role_title,
-            company: job.company,
-            decision: dec,
-            summary: decision?.summary ?? null,
-            verdict_id: persistResult.verdict_id,
-        });
-    }
-
-    const elapsedS = (Date.now() - overallStart) / 1000;
-
-    console.log(`[AgentRun] ✅ Pipeline complete in ${elapsedS.toFixed(1)}s | scanned: ${discovered.length} | debated: ${survivors.length} | tally: ${JSON.stringify(tally)}`);
-    console.log(`[AgentRun] ─────────────────────────────────────────`);
-
-    await emit({
-        type: 'run_complete',
-        scanned: discovered.length,
-        survivors: survivors.length,
-        debated: survivors.length,
-        elapsed_s: elapsedS,
-        tally,
+    return new Response(upstream.body, {
+        status: upstream.status,
+        headers: {
+            'Content-Type': upstream.headers.get('content-type') ?? 'text/event-stream',
+            'Cache-Control': 'no-cache, no-transform',
+            Connection: 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        },
     });
 }

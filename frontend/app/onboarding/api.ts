@@ -20,7 +20,7 @@ import type {
   ParsedProfile,
   PriorityFactor,
   ResidencyStatus,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import type { OnboardingRecord } from './lib/onboardingStatus';
 
 /** Result of an onboarding API call that tolerates the route being absent. */

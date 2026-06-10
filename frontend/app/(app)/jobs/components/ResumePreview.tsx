@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
-import type { Materials, MasterDecision } from '@worksignal/shared';
+import type { Materials, MasterDecision } from '@/app/types/shared';
 import { resumeFileName } from '../lib/resumeFileName';
 
 export interface ResumePreviewProps {

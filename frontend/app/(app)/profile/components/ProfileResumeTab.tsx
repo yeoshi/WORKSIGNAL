@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import type { ProfileSectionHandle } from '../../../onboarding/lib/profileSectionHandle';
 import type { OnboardingRecord } from '../../../onboarding/lib/onboardingStatus';
 import { deriveFileNameFromS3Key } from '../../../onboarding/lib/deriveFileNameFromS3Key';

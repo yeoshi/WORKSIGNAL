@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Job, MasterDecision, Materials } from '@worksignal/shared';
+import type { Job, MasterDecision, Materials } from '@/app/types/shared';
 import { ResumePreview } from './ResumePreview';
 import { CoverLetterEditor } from './CoverLetterEditor';
 

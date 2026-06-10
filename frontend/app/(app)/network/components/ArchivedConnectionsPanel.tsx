@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkSuggestion } from '@/app/types/shared';
 import { ConnectionCard } from './ConnectionCard';
 import { fetchNetworkOnce, type NetworkData } from '../lib/fetchNetwork';
 import {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Materials } from '@worksignal/shared';
+import type { Materials } from '@/app/types/shared';
 import { Modal } from '../../../components/ui/Modal';
 import { JobDetailView } from '../../jobs/components/JobDetailView';
 import { JobModalHeader } from '../../jobs/components/JobModalHeader';

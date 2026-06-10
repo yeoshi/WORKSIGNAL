@@ -32,7 +32,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
         const result = await persistOAuthSignIn({
           profile: profile as {

@@ -14,7 +14,7 @@ import { CoverLetterEditor } from './CoverLetterEditor';
 import { ApplicationMaterials } from './ApplicationMaterials';
 import { ActionBar } from './ActionBar';
 import { JobModalHeader } from './JobModalHeader';
-import type { Job, VerdictSet, MasterDecision, Materials } from '@worksignal/shared';
+import type { Job, VerdictSet, MasterDecision, Materials } from '@/app/types/shared';
 import type { AgentCardData } from './agentTheme';
 
 // ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ import {
   PRIORITY_FACTORS,
   type CareerStage,
   type PriorityFactor,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 
 /** A discriminated result returned by every validator in this module. */
 export type ValidationResult =

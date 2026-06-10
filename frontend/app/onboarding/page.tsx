@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import { Logo } from '../components/ui/Logo';
 import { Stepper } from '../components/onboarding/Stepper';
 import { fetchOnboardingState } from './api';

@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ConnectionCard } from './ConnectionCard';
-import type { NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkSuggestion } from '@/app/types/shared';
 
 const mockSuggestion: NetworkSuggestion = {
   name: 'Jane Doe',

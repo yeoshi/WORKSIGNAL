@@ -6,7 +6,7 @@
 import type {
   EducationEntry,
   ParsedProfile,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import {
   deriveHeadlineRole,
   deriveYearsExperience,

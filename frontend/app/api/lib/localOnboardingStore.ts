@@ -5,7 +5,7 @@
  * are unavailable or expired.
  */
 
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 
 export type LocalUserRecord = Record<string, unknown> & {
   user_id: string;

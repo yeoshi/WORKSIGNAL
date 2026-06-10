@@ -68,10 +68,8 @@ export async function POST(request: NextRequest) {
       return Response.json({ ok: true, s3Key, sampleText });
     }
 
-    const { uploadResume } = await import(
-      '@worksignal/backend/src/onboarding/resumeUpload.js'
-    );
-    const { S3Helper } = await import('@worksignal/shared');
+    const { uploadResume } = await import('../../lib/resumeUpload');
+    const { S3Helper } = await import('@/app/api/lib/aws');
 
     const s3 = new S3Helper({
       bucket: process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents',

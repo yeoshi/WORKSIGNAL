@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ResidencyStatus } from '@worksignal/shared';
+import type { ResidencyStatus } from '@/app/types/shared';
 import { PillTabs } from '../../components/ui/PillTabs';
 import { Snackbar } from '../../components/ui/Snackbar';
 import { fetchOnboardingState } from '../../onboarding/api';

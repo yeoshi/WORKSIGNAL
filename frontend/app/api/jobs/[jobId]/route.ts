@@ -26,7 +26,7 @@ export async function GET(
 
     try {
         const { jobId } = params;
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
+        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
 
         // Load the job record.
@@ -114,7 +114,7 @@ export async function GET(
         const s3Bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
 
         // Generate pre-signed URLs for customised resume (if any) and base resume.
-        const { S3Helper } = await import('@worksignal/shared');
+        const { S3Helper } = await import('@/app/api/lib/aws');
         const s3 = new S3Helper({ bucket: s3Bucket });
 
         await Promise.all([

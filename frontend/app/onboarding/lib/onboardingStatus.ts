@@ -9,7 +9,7 @@ import {
   type ParsedProfile,
   type PriorityFactor,
   type ResidencyStatus,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import { hasConfirmedResumeProfile } from './parsedProfileDefaults';
 
 export type OnboardingRecord = {

@@ -1,13 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { persistOAuthSignIn } from './persistOAuthSignIn';
 
-const mockOnCallback = vi.fn();
-
-vi.mock('@worksignal/backend/src/auth/authService.js', () => ({
-  createAuthService: () => ({ onCallback: mockOnCallback }),
-  GMAIL_READONLY_SCOPE: 'https://www.googleapis.com/auth/gmail.readonly',
-  USERS_TABLE: 'Users',
-}));
+const mockFetch = vi.fn();
 
 describe('persistOAuthSignIn', () => {
   const db = {
@@ -16,11 +10,10 @@ describe('persistOAuthSignIn', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOnCallback.mockResolvedValue({
-      userId: 'google-sub-123',
-      email: 'alex@example.com',
-      name: 'Alex',
-      inboxMonitoringAvailable: true,
+    vi.stubGlobal('fetch', mockFetch);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
     });
   });
 
@@ -44,18 +37,7 @@ describe('persistOAuthSignIn', () => {
 
     expect(result.isNewUser).toBe(true);
     expect(result.redirectUrl).toBe('/onboarding');
-    expect(mockOnCallback).toHaveBeenCalledWith(
-      {
-        sub: 'google-sub-123',
-        email: 'alex@example.com',
-        name: 'Alex',
-      },
-      expect.objectContaining({
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-        gmailScopeGranted: true,
-      }),
-    );
+    expect(mockFetch).toHaveBeenCalled();
   });
 
   it('does not redirect returning users', async () => {

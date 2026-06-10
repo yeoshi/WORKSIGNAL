@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { generateText } from 'ai';
-import type { Decision } from '@worksignal/shared';
+import type { Decision } from '@/app/types/shared';
 import { getBedrockModel } from './bedrockStream';
 import {
   buildDemoCoverLetter,
@@ -105,7 +105,7 @@ export async function generateAndPersistJobMaterials(params: {
 }): Promise<GeneratedJobMaterials> {
   const { userId, jobId, verdictId, job, decision } = params;
 
-  const { DynamoDBWrapper } = await import('@worksignal/shared');
+  const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
   const db = new DynamoDBWrapper();
 
   let userProfile = params.userProfile;
@@ -195,7 +195,7 @@ async function persistTailoredResumePdf(params: {
   }
 
   try {
-    const { S3Helper } = await import('@worksignal/shared');
+    const { S3Helper } = await import('@/app/api/lib/aws');
     const pdfBytes = await textToResumePdf(resumeText);
     const bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
     const resumeS3Key = `resumes/customised/${userId}/${jobId}/${randomUUID()}/tailored-resume.pdf`;
@@ -240,7 +240,7 @@ export async function generateAndPersistResumeOnly(params: {
   customisationApplied: boolean;
 }> {
   const { userId, jobId, verdictId, job, decision } = params;
-  const { DynamoDBWrapper } = await import('@worksignal/shared');
+  const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
   const db = new DynamoDBWrapper();
 
   let userProfile = params.userProfile;

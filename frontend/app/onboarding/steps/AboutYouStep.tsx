@@ -5,7 +5,7 @@
  */
 
 import { forwardRef, useImperativeHandle, useState } from 'react';
-import type { CareerStage, ResidencyStatus } from '@worksignal/shared';
+import type { CareerStage, ResidencyStatus } from '@/app/types/shared';
 import type {
   ProfileSaveResult,
   ProfileSectionHandle,

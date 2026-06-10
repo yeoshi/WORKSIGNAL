@@ -3,6 +3,7 @@
  * LOCAL_DEV=true (or DEMO_MODE).
  */
 
+import { getApiBaseUrl } from './apiGateway';
 import {
   getLocalUser,
   isLocalOnboardingEnabled,
@@ -16,7 +17,7 @@ export async function loadOnboardingUser(
     return getLocalUser(userId);
   }
 
-  const { DynamoDBWrapper } = await import('@worksignal/shared');
+  const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
   const db = new DynamoDBWrapper();
   const record = await db.get('Users', { user_id: userId });
   return record ?? null;
@@ -32,11 +33,69 @@ export async function createOnboardingServiceForRequest() {
     return createLocalOnboardingService();
   }
 
-  const { createOnboardingService } = await import(
-    '@worksignal/backend/src/onboarding/onboardingService.js'
-  );
-  const { DynamoDBWrapper } = await import('@worksignal/shared');
-  return createOnboardingService({ db: new DynamoDBWrapper() });
+  return createRemoteOnboardingService();
+}
+
+function createRemoteOnboardingService() {
+  const base = getApiBaseUrl();
+
+  async function postJson(path: string, body: unknown) {
+    const res = await fetch(`${base}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || `Onboarding request failed: ${path}`);
+    }
+    return res.json().catch(() => ({}));
+  }
+
+  return {
+    async setCareerProfile(
+      userId: string,
+      stage: string,
+      residency: string,
+      switchContext?: { from: string; to: string },
+    ) {
+      await postJson('/onboarding/profile', {
+        userId,
+        stage,
+        residency,
+        switchContext,
+      });
+    },
+    async confirmResumeProfile(
+      userId: string,
+      profile: Record<string, unknown>,
+      resumeS3Key?: string,
+    ) {
+      await postJson('/onboarding/resume-details', { userId, profile, resumeS3Key });
+    },
+    async setCoverLetterSample(userId: string, s3Key: string, sampleText: string) {
+      await postJson('/onboarding/cover-letter', { userId, s3Key, sampleText });
+    },
+    async setTargets(
+      userId: string,
+      roles: string[],
+      industries: string[],
+      dreamCompanies: string[],
+    ) {
+      await postJson('/onboarding/targets', { userId, roles, industries, dreamCompanies });
+    },
+    async setPriorityRanking(userId: string, ranking: string[]) {
+      await postJson('/onboarding/targets', { userId, priority_ranking: ranking });
+      return undefined;
+    },
+    async setNonNegotiables(userId: string, nn: Record<string, unknown>) {
+      await postJson('/onboarding/targets', { userId, non_negotiables: nn });
+      return undefined;
+    },
+    async editOnboarding(userId: string, patch: Record<string, unknown>) {
+      return postJson('/onboarding', { userId, patch });
+    },
+  };
 }
 
 function createLocalOnboardingService() {

@@ -5,7 +5,7 @@
  * name, date, and a link to more details.
  */
 
-import type { NetworkingOpportunity } from '@worksignal/shared';
+import type { NetworkingOpportunity } from '@/app/types/shared';
 import { formatShortDate } from '../../../lib/formatDate';
 
 export interface UpcomingEventsProps {
