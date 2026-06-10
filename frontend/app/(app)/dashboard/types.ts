@@ -53,6 +53,12 @@ export interface ActionNeededItem {
   source_url?: string;
 }
 
+/**
+ * Jobs the orchestrator approved for apply but without a hiring-manager email.
+ * The user must apply on the job site directly.
+ */
+export type PendingSendItem = ActionNeededItem;
+
 /** Pipeline summary — counts of applications by status (Req 17). */
 export interface PipelineSummary {
   total: number;
@@ -84,6 +90,7 @@ export interface IntelligenceSummary {
 export interface DashboardData {
   agent_status: AgentStatusSummary;
   action_needed: ActionNeededItem[];
+  pending_send: PendingSendItem[];
   pipeline: PipelineSummary;
   growth: GrowthCardItem[];
   network: NetworkCardItem[];

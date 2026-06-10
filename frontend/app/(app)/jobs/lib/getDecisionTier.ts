@@ -1,8 +1,14 @@
-import type { Decision } from '@/app/types/shared';
+import type { Decision, OrchestratorVerdict } from '@/app/types/shared';
 
 export type DecisionTier = 'green' | 'yellow' | 'red';
 
-export function getDecisionTier(decision: Decision): DecisionTier {
+export function getDecisionTier(
+  decision: Decision,
+  orchestratorVerdict?: OrchestratorVerdict | null,
+): DecisionTier {
+  if (orchestratorVerdict?.action === 'apply') {
+    return 'green';
+  }
   if (decision === 'apply_consensus' || decision === 'apply_with_caveat') {
     return 'green';
   }

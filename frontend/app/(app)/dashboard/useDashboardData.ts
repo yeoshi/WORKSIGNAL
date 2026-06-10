@@ -22,6 +22,7 @@ export interface UseDashboardData {
   state: LoadState;
   reload: () => void;
   removeActionNeeded: (jobId: string) => void;
+  removePendingSend: (jobId: string) => void;
   approveSuggestion: (suggestionId: string) => Promise<void>;
   rejectSuggestion: (suggestionId: string) => Promise<void>;
 }
@@ -44,6 +45,7 @@ export function useDashboardData(): UseDashboardData {
       setData({
         ...payload,
         action_needed: filterSkippedActionNeeded(payload.action_needed),
+        pending_send: filterSkippedActionNeeded(payload.pending_send ?? []),
       });
       setState('ready');
     } catch {
@@ -115,11 +117,22 @@ export function useDashboardData(): UseDashboardData {
     });
   }, []);
 
+  const removePendingSend = useCallback((jobId: string) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        pending_send: prev.pending_send.filter((i) => i.job_id !== jobId),
+      };
+    });
+  }, []);
+
   return {
     data,
     state,
     reload: () => void load(),
     removeActionNeeded,
+    removePendingSend,
     approveSuggestion,
     rejectSuggestion,
   };

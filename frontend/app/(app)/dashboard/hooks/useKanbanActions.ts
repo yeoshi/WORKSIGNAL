@@ -7,7 +7,9 @@ import { markJobSkipped } from '../lib/skippedJobsStorage';
 
 export interface UseKanbanActionsOptions {
   actionNeeded: ActionNeededItem[];
+  pendingSend: ActionNeededItem[];
   removeActionNeeded: (jobId: string) => void;
+  removePendingSend: (jobId: string) => void;
   prependApplication: (app: Application) => void;
   reloadDashboard: () => void;
   reloadPipeline: () => void;
@@ -41,25 +43,29 @@ function buildSentApplication(
 
 export function useKanbanActions({
   actionNeeded,
+  pendingSend,
   removeActionNeeded,
+  removePendingSend,
   prependApplication,
   reloadDashboard,
   reloadPipeline,
 }: UseKanbanActionsOptions) {
   const findItem = useCallback(
-    (jobId: string) => actionNeeded.find((i) => i.job_id === jobId),
-    [actionNeeded],
+    (jobId: string) =>
+      actionNeeded.find((item) => item.job_id === jobId) ??
+      pendingSend.find((item) => item.job_id === jobId),
+    [actionNeeded, pendingSend],
   );
 
   const moveToSent = useCallback(
     (jobId: string) => {
       const item = findItem(jobId);
-      if (item) {
-        removeActionNeeded(jobId);
-        prependApplication(buildSentApplication(item));
-      }
+      if (!item) return;
+      removeActionNeeded(jobId);
+      removePendingSend(jobId);
+      prependApplication(buildSentApplication(item));
     },
-    [findItem, removeActionNeeded, prependApplication],
+    [findItem, removeActionNeeded, removePendingSend, prependApplication],
   );
 
   const send = useCallback(
@@ -91,8 +97,9 @@ export function useKanbanActions({
       }
       markJobSkipped(jobId);
       removeActionNeeded(jobId);
+      removePendingSend(jobId);
     },
-    [removeActionNeeded],
+    [removeActionNeeded, removePendingSend],
   );
 
   const save = useCallback(async (_jobId: string) => {

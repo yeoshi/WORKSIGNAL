@@ -4,9 +4,21 @@ export interface AgentAvatarProps {
   agent: ExtendedAgentName;
   size: number;
   className?: string;
+  /** Square shows the full character art; circle crops for compact headers. */
+  shape?: 'circle' | 'square';
 }
 
-export function AgentAvatar({ agent, size, className = '' }: AgentAvatarProps) {
+export function AgentAvatar({
+  agent,
+  size,
+  className = '',
+  shape = 'circle',
+}: AgentAvatarProps) {
+  const shapeClass =
+    shape === 'square'
+      ? 'rounded-lg object-contain bg-ws-paper'
+      : 'rounded-full object-cover';
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -14,9 +26,7 @@ export function AgentAvatar({ agent, size, className = '' }: AgentAvatarProps) {
       alt=""
       width={size}
       height={size}
-      className={['shrink-0 rounded-full object-cover', className]
-        .filter(Boolean)
-        .join(' ')}
+      className={['shrink-0', shapeClass, className].filter(Boolean).join(' ')}
       aria-hidden
       data-agent-avatar={agent}
     />

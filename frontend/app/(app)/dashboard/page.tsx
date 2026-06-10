@@ -14,11 +14,14 @@ import { IssuesModal } from './components/IssuesModal';
 import { JobDetailModal } from './components/JobDetailModal';
 import { AgentRunModal } from './components/AgentRunModal';
 import { CoverLetterModal } from './components/CoverLetterModal';
+import { GhostedModal } from './components/GhostedModal';
 import { useDashboardData } from './useDashboardData';
 import { useAgentRun } from './hooks/useAgentRun';
 import { usePipeline } from '../pipeline/hooks/usePipeline';
 import { useKanbanActions } from './hooks/useKanbanActions';
 import { Metric } from '../../components/ui/Metric';
+import { AgentIntroModal } from '../../components/intro/AgentIntroModal';
+import { useSegmentIntro } from '../../hooks/useSegmentIntro';
 import {
   buildDashboardIssues,
   countPendingIssues,
@@ -26,8 +29,15 @@ import {
 
 function DashboardPageContent() {
   const router = useRouter();
-  const { data, state, removeActionNeeded, approveSuggestion, rejectSuggestion, reload } =
-    useDashboardData();
+  const {
+    data,
+    state,
+    removeActionNeeded,
+    removePendingSend,
+    approveSuggestion,
+    rejectSuggestion,
+    reload,
+  } = useDashboardData();
   const {
     applications,
     isLoading: pipelineLoading,
@@ -43,6 +53,12 @@ function DashboardPageContent() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobShowActions, setSelectedJobShowActions] = useState(false);
   const [applyJobId, setApplyJobId] = useState<string | null>(null);
+  const [ghostedOpen, setGhostedOpen] = useState(false);
+
+  const dashboardIntro = useSegmentIntro('dashboard');
+  const briefIntro = useSegmentIntro('brief');
+  const growthIntro = useSegmentIntro('growth');
+  const networkIntro = useSegmentIntro('network');
 
   const agentRun = useAgentRun(reload);
 
@@ -51,14 +67,35 @@ function DashboardPageContent() {
   }, []);
 
   const actionNeeded = data?.action_needed ?? [];
+  const pendingSend = data?.pending_send ?? [];
 
   const { send, skip, save, markSent } = useKanbanActions({
     actionNeeded,
+    pendingSend,
     removeActionNeeded,
+    removePendingSend,
     prependApplication,
     reloadDashboard: reload,
     reloadPipeline,
   });
+
+  useEffect(() => {
+    if (state === 'ready') {
+      dashboardIntro.showIfFirstVisit();
+    }
+  }, [state, dashboardIntro.showIfFirstVisit]);
+
+  useEffect(() => {
+    if (briefOpen) briefIntro.showIfFirstVisit();
+  }, [briefOpen, briefIntro.showIfFirstVisit]);
+
+  useEffect(() => {
+    if (growthOpen) growthIntro.showIfFirstVisit();
+  }, [growthOpen, growthIntro.showIfFirstVisit]);
+
+  useEffect(() => {
+    if (networkOpen) networkIntro.showIfFirstVisit();
+  }, [networkOpen, networkIntro.showIfFirstVisit]);
 
   const issues = useMemo(
     () => (data ? buildDashboardIssues(data) : []),
@@ -125,7 +162,7 @@ function DashboardPageContent() {
             agentRunning={agentRun.state === 'running'}
           />
 
-          <div className="grid min-w-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,26%)] lg:gap-5">
+          <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,26%)] lg:gap-5">
             <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
               <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-4">
                 <Metric
@@ -161,8 +198,10 @@ function DashboardPageContent() {
               <PipelineKanban
                 applications={applications}
                 actionNeeded={data.action_needed}
+                pendingSend={data.pending_send}
                 isLoading={pipelineLoading}
                 onOpenJob={handleOpenJob}
+                onOpenGhosted={() => setGhostedOpen(true)}
                 onApply={handleApply}
                 onSend={send}
                 onSkip={skip}
@@ -172,18 +211,49 @@ function DashboardPageContent() {
             </div>
 
             <InsightRail
-              expanded
               growth={data.growth}
               network={data.network}
               intelligence={data.intelligence}
-              onOpenGrowth={() => setGrowthOpen(true)}
-              onOpenNetwork={() => setNetworkOpen(true)}
-              onOpenBrief={() => setBriefOpen(true)}
+              onOpenGrowth={() => {
+                setGrowthOpen(true);
+              }}
+              onOpenNetwork={() => {
+                setNetworkOpen(true);
+              }}
+              onOpenBrief={() => {
+                setBriefOpen(true);
+              }}
             />
           </div>
         </>
       )}
 
+      <AgentIntroModal
+        segment="dashboard"
+        open={dashboardIntro.open}
+        onDismiss={dashboardIntro.dismiss}
+      />
+      <AgentIntroModal
+        segment="brief"
+        open={briefIntro.open}
+        onDismiss={briefIntro.dismiss}
+      />
+      <AgentIntroModal
+        segment="growth"
+        open={growthIntro.open}
+        onDismiss={growthIntro.dismiss}
+      />
+      <AgentIntroModal
+        segment="network"
+        open={networkIntro.open}
+        onDismiss={networkIntro.dismiss}
+      />
+      <GhostedModal
+        open={ghostedOpen}
+        onClose={() => setGhostedOpen(false)}
+        applications={applications}
+        onOpenJob={(jobId) => handleOpenJob(jobId, { showActions: false })}
+      />
       <GrowthModal
         open={growthOpen}
         onClose={() => setGrowthOpen(false)}

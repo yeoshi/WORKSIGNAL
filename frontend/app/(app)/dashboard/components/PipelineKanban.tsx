@@ -1,16 +1,17 @@
 'use client';
 
+import { Ghost } from 'lucide-react';
 import type { Application, ApplicationStatus } from '@/app/types/shared';
-import type { ActionNeededItem } from '../types';
+import type { ActionNeededItem, PendingSendItem } from '../types';
 import { formatSentDate } from '../../pipeline/lib/format';
 import { DecisionKanbanCard } from './DecisionKanbanCard';
+import { PendingSendKanbanCard } from './PendingSendKanbanCard';
 
 const PIPELINE_COLUMNS: { id: ApplicationStatus; label: string }[] = [
   { id: 'sent', label: 'Sent' },
   { id: 'opened', label: 'Opened' },
   { id: 'callback', label: 'Callback' },
   { id: 'rejected', label: 'Rejected' },
-  { id: 'ghosted', label: 'Ghosted' },
 ];
 
 const OTHER_STATUSES: ApplicationStatus[] = [
@@ -19,21 +20,27 @@ const OTHER_STATUSES: ApplicationStatus[] = [
   'delivery_failed',
 ];
 
-const COLUMN_HEADER_CLASS: Partial<Record<ApplicationStatus | 'needs_decision', string>> = {
+type KanbanColumnId =
+  | ApplicationStatus
+  | 'needs_decision'
+  | 'pending_send';
+
+const COLUMN_HEADER_CLASS: Partial<Record<KanbanColumnId, string>> = {
   needs_decision: 'text-indigo-600',
+  pending_send: 'text-amber-600',
   sent: 'text-gray-600',
   opened: 'text-gray-600',
   callback: 'text-emerald-600',
   rejected: 'text-red-500',
-  ghosted: 'text-gray-400',
 };
 
 export interface PipelineKanbanProps {
   applications: Application[];
   actionNeeded: ActionNeededItem[];
+  pendingSend: PendingSendItem[];
   isLoading?: boolean;
   onOpenJob: (jobId: string, opts: { showActions: boolean }) => void;
-  /** Opens the cover-letter draft modal for a job. */
+  onOpenGhosted: () => void;
   onApply: (jobId: string) => void;
   onSend: (jobId: string) => Promise<void>;
   onSkip: (jobId: string) => Promise<void>;
@@ -47,6 +54,7 @@ function groupApplications(applications: Application[]) {
   const other: Application[] = [];
 
   for (const app of applications) {
+    if (app.status === 'ghosted') continue;
     if (groups.has(app.status)) {
       groups.get(app.status)!.push(app);
     } else if (OTHER_STATUSES.includes(app.status)) {
@@ -60,8 +68,10 @@ function groupApplications(applications: Application[]) {
 export function PipelineKanban({
   applications,
   actionNeeded,
+  pendingSend,
   isLoading = false,
   onOpenJob,
+  onOpenGhosted,
   onApply,
   onSend,
   onSkip,
@@ -69,8 +79,12 @@ export function PipelineKanban({
   onMarkSent,
 }: PipelineKanbanProps) {
   const { groups, other } = groupApplications(applications);
-  const totalCount = applications.length + actionNeeded.length;
-  const isEmpty = totalCount === 0;
+  const ghostedCount = applications.filter((app) => app.status === 'ghosted').length;
+  const totalCount =
+    applications.filter((app) => app.status !== 'ghosted').length +
+    actionNeeded.length +
+    pendingSend.length;
+  const isEmpty = totalCount === 0 && ghostedCount === 0;
 
   if (isLoading && isEmpty) {
     return (
@@ -97,15 +111,31 @@ export function PipelineKanban({
       data-testid="pipeline-kanban"
       className="ws-card min-w-0 overflow-hidden"
     >
-      <div className="border-b border-ws-line px-4 py-4 sm:px-5">
-        <h2 className="font-wordmark text-lg font-semibold text-ws-ink">
-          Pipeline
-        </h2>
-        <p className="mt-0.5 text-sm text-ws-muted">
-          Tracking {totalCount} application{totalCount === 1 ? '' : 's'}
-        </p>
+      <div className="flex items-start justify-between gap-3 border-b border-ws-line px-4 py-4 sm:px-5">
+        <div>
+          <h2 className="font-wordmark text-lg font-semibold text-ws-ink">Pipeline</h2>
+          <p className="mt-0.5 text-sm text-ws-muted">
+            Tracking {totalCount} application{totalCount === 1 ? '' : 's'}
+          </p>
+        </div>
+        <button
+          type="button"
+          data-testid="pipeline-ghosted-tab"
+          onClick={onOpenGhosted}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ws-line px-3 py-1 text-xs font-medium text-ws-muted transition hover:bg-ws-paper hover:text-ws-ink"
+        >
+          <Ghost size={12} aria-hidden />
+          Ghosted
+          <span
+            data-testid="pipeline-ghosted-count"
+            className="rounded-full bg-ws-line/60 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ws-ink"
+          >
+            {ghostedCount}
+          </span>
+        </button>
       </div>
-      <div className="grid min-w-0 w-full grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-2.5 sm:p-4 md:grid-cols-4 lg:grid-cols-[minmax(0,1.35fr)_repeat(5,minmax(0,1fr))] lg:gap-2">
+
+      <div className="grid min-w-0 w-full grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-2.5 sm:p-4 md:grid-cols-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.1fr)_repeat(4,minmax(0,1fr))] lg:gap-2">
         <div
           className="flex min-w-0 flex-col rounded-xl bg-ws-paper/80"
           data-testid="kanban-column-needs_decision"
@@ -131,14 +161,46 @@ export function PipelineKanban({
                 <DecisionKanbanCard
                   key={`${item.job_id}:${item.decision}`}
                   item={item}
-                  onOpenJob={(jobId) =>
-                    onOpenJob(jobId, { showActions: true })
-                  }
+                  onOpenJob={(jobId) => onOpenJob(jobId, { showActions: true })}
                   onApply={onApply}
                   onSend={onSend}
                   onSkip={onSkip}
                   onSave={onSave}
                   onMarkSent={onMarkSent}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        <div
+          className="flex min-w-0 flex-col rounded-xl bg-ws-paper/80"
+          data-testid="kanban-column-pending_send"
+        >
+          <div className="flex items-start justify-between gap-1 px-2 py-2 sm:px-2.5">
+            <span className="font-mono text-[9px] uppercase leading-tight tracking-[0.1em] text-amber-600 lg:text-[10px]">
+              Pending Send
+            </span>
+            <span className="rounded-full bg-ws-line/60 px-2 py-0.5 text-xs font-medium text-ws-ink">
+              {pendingSend.length}
+            </span>
+          </div>
+          <div className="flex flex-1 flex-col gap-2 px-2 pb-2">
+            {pendingSend.length === 0 ? (
+              <p
+                data-testid="kanban-pending-send-empty"
+                className="rounded-lg border border-dashed border-ws-line p-3 text-center text-xs text-ws-muted"
+              >
+                None queued
+              </p>
+            ) : (
+              pendingSend.map((item) => (
+                <PendingSendKanbanCard
+                  key={`pending:${item.job_id}`}
+                  item={item}
+                  onOpenJob={(jobId) => onOpenJob(jobId, { showActions: false })}
+                  onMarkSent={onMarkSent}
+                  onSkip={onSkip}
                 />
               ))
             )}
@@ -173,9 +235,7 @@ export function PipelineKanban({
                     key={app.application_id}
                     type="button"
                     data-testid="kanban-card"
-                    onClick={() =>
-                      onOpenJob(app.job_id, { showActions: false })
-                    }
+                    onClick={() => onOpenJob(app.job_id, { showActions: false })}
                     className="min-w-0 rounded-lg border border-ws-line bg-ws-card p-2.5 text-left shadow-sm transition hover:border-ws-teal/40 hover:shadow-md sm:p-3"
                   >
                     <p className="text-sm font-semibold leading-snug text-ws-ink">
