@@ -22,6 +22,10 @@ export interface ResumePreviewProps {
   jobId?: string | null;
   /** Called after a custom resume is successfully uploaded. */
   onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
+  /** True while resume is streaming or being saved as PDF. */
+  resumeLoading?: boolean;
+  /** Error from resume generation or PDF persistence. */
+  resumeGenerationError?: string | null;
 }
 
 export function ResumePreview({
@@ -37,10 +41,13 @@ export function ResumePreview({
   onUseCustomisedResume,
   jobId,
   onCustomResumeUploaded,
+  resumeLoading = false,
+  resumeGenerationError = null,
 }: ResumePreviewProps) {
   const fileName = resumeFileName(resumeS3Key);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -111,6 +118,65 @@ export function ResumePreview({
         >
           {decision.resume_instructions}
         </p>
+      ) : null}
+
+      {resumeGenerationError ? (
+        <p
+          role="alert"
+          data-testid="resume-generation-error"
+          className="mt-2 text-xs text-red-600"
+        >
+          {resumeGenerationError}
+        </p>
+      ) : null}
+
+      {!compact ? (
+        <div className="mt-3 min-h-0 flex-1">
+          {resumeUrl ? (
+            <>
+              <button
+                type="button"
+                data-testid="resume-preview-toggle"
+                onClick={() => setPreviewOpen((open) => !open)}
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+              >
+                {previewOpen ? 'Hide preview' : 'Show preview'}
+              </button>
+              {previewOpen ? (
+                <div
+                  data-testid="resume-preview-pdf"
+                  className="relative mt-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+                >
+                  {resumeLoading ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-gray-500"
+                        aria-hidden
+                      />
+                      <span className="sr-only">Updating resume preview…</span>
+                    </div>
+                  ) : null}
+                  <iframe
+                    title="Resume preview"
+                    src={`${resumeUrl}#toolbar=0&navpanes=0`}
+                    className="h-72 w-full"
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : resumeLoading ? (
+            <div
+              data-testid="resume-loading"
+              className="flex h-72 items-center justify-center rounded-lg border border-dashed border-gray-200 bg-gray-50"
+            >
+              <p className="flex items-center gap-2 text-xs text-gray-500">
+                <Loader2 size={14} className="animate-spin" aria-hidden />
+                Tailoring your resume…
+              </p>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="mt-auto space-y-2 pt-3">

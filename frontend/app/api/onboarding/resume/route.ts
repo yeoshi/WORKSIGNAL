@@ -12,6 +12,7 @@ import {
   putLocalUser,
 } from '../../lib/localOnboardingStore';
 import { parseResumePdfLocally } from '../../lib/localResumeParser';
+import { getAwsRegion } from '../../lib/awsRegion';
 
 const LOCAL_RESUME_PREFIX = 'local/resumes';
 
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const s3 = new S3Helper({
       bucket,
-      region: process.env.WORKSIGNAL_S3_REGION ?? 'ap-southeast-1',
+      region: getAwsRegion(),
     });
 
     const result = await uploadResume(
@@ -95,20 +96,35 @@ export async function POST(request: NextRequest) {
       `[resume-upload] ✓ persisted resume_s3_key to Users table (user=${user.userId})`,
     );
 
-    let profile: ParsedProfile | null = null;
-    let parseFailed = false;
+    let profile: ParsedProfile | null = await parseResumePdfLocally(buffer);
+    let parseFailed = profile === null;
 
-    try {
-      const { createResumeParser } = await import('@worksignal/backend');
-      const parser = createResumeParser({ s3 });
-      const parsed = await parser.parse(result.s3Key);
-      if ('current_role' in parsed) {
-        profile = parsed;
-      } else {
+    if (!profile) {
+      try {
+        const { createResumeParser } = await import('@worksignal/backend');
+        const { createBedrockTextInvoke } = await import('../../lib/bedrockTextInvoke');
+        const parser = createResumeParser({
+          s3,
+          bedrockInvoke: createBedrockTextInvoke(),
+        });
+        const parsed = await parser.parse(result.s3Key);
+        if ('current_role' in parsed) {
+          profile = parsed;
+          parseFailed = false;
+        } else {
+          console.warn(
+            '[resume-upload] Bedrock parse returned ParseFailure:',
+            (parsed as { message?: string }).message ?? parsed,
+          );
+        }
+      } catch (error) {
+        console.warn('[resume-upload] Resume parsing failed:', error);
         parseFailed = true;
       }
-    } catch {
-      parseFailed = true;
+    } else {
+      console.log(
+        `[resume-upload] ✓ parsed locally (user=${user.userId}, role=${profile.current_role})`,
+      );
     }
 
     return Response.json({

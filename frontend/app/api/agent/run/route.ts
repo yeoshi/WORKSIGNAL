@@ -30,6 +30,9 @@ export type AgentRunEvent =
     | { type: 'agent_failed'; agent: AgentName }
     | { type: 'db_persist'; step: 'verdicts' | 'master_decision'; job_id: string; title: string; verdict_id?: string; decision?: string; stored_agents?: string[] }
     | { type: 'debate_result'; job_id: string; title: string; company: string; decision: string; summary: string | null; verdict_id: string }
+    | { type: 'materials_start'; job_id: string; title: string }
+    | { type: 'materials_complete'; job_id: string; title: string }
+    | { type: 'materials_failed'; job_id: string; title: string; message: string }
     | {
         type: 'orchestrator_reasoning';
         job_id: string;
@@ -103,7 +106,20 @@ async function runPipeline(
 
     // Lazy imports — AWS SDK needs env vars set before use.
     const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, hasAnyValidVerdict, resolveEnriched, isInvalidVerdict } = await import('@worksignal/backend');
+    const {
+        createOpportunityScanner,
+        preFilter,
+        runAmbitionAgent,
+        runRealismAgent,
+        runRiskAgent,
+        runOpportunityAgent,
+        persistAgentVerdicts,
+        hasAnyValidVerdict,
+        resolveEnriched,
+        isInvalidVerdict,
+    } = await import('@worksignal/backend');
+    const { generateAndPersistJobMaterials, shouldGenerateJobMaterials } = await import('../../lib/jobMaterialsGeneration');
+    const { serializeUserProfileFromRecord } = await import('../../lib/serializeUserProfile');
 
     const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
     const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
@@ -345,6 +361,28 @@ async function runPipeline(
             },
         );
         console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
+
+        if (shouldGenerateJobMaterials(dec)) {
+            console.log(`[AgentRun] ⏳ Generating application materials for ${job.job_id}`);
+            await emit({ type: 'materials_start', job_id: job.job_id, title: job.role_title });
+            try {
+                const userProfile = serializeUserProfileFromRecord(rawUser as Record<string, unknown>);
+                await generateAndPersistJobMaterials({
+                    userId,
+                    jobId: job.job_id,
+                    verdictId: persistResult.verdict_id,
+                    job: job as unknown as Record<string, unknown>,
+                    decision: decision as unknown as Record<string, unknown>,
+                    userProfile,
+                });
+                console.log(`[AgentRun] ✓ Application materials saved for ${job.job_id}`);
+                await emit({ type: 'materials_complete', job_id: job.job_id, title: job.role_title });
+            } catch (materialsError) {
+                const msg = materialsError instanceof Error ? materialsError.message : 'Materials generation failed';
+                console.warn(`[AgentRun] ⚠ Materials generation failed for ${job.job_id}:`, msg);
+                await emit({ type: 'materials_failed', job_id: job.job_id, title: job.role_title, message: msg });
+            }
+        }
 
         tally[dec] = (tally[dec] ?? 0) + 1;
 

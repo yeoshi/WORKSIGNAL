@@ -222,8 +222,14 @@ export interface TargetsPayload {
   non_negotiables: NonNegotiables;
 }
 
-export async function saveTargets(payload: TargetsPayload): Promise<ApiResult> {
-  return postJson('/api/onboarding/targets', payload);
+export interface TargetsSaveData {
+  min_salary?: number;
+}
+
+export async function saveTargets(
+  payload: TargetsPayload,
+): Promise<ApiResult<TargetsSaveData>> {
+  return postJson<TargetsSaveData>('/api/onboarding/targets', payload);
 }
 
 /** Fetch the current onboarding state for the authenticated user. */
