@@ -22,41 +22,8 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ account, profile }) {
-      if (!account || !profile) {
-        return false;
-      }
-
-      if (DEMO_MODE) {
-        return true;
-      }
-
-      try {
-        const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
-        const db = new DynamoDBWrapper();
-        const result = await persistOAuthSignIn({
-          profile: profile as {
-            sub?: string | null;
-            email?: string | null;
-            name?: string | null;
-          },
-          account,
-          encryptionSecret: TOKEN_ENCRYPTION_SECRET,
-          db,
-        });
-
-        return result.redirectUrl ?? true;
-      } catch (error) {
-        console.error('OAuth sign-in persistence failed:', error);
-        const message =
-          error instanceof Error ? error.message : 'Sign-in persistence failed';
-        if (/ExpiredToken|expired token/i.test(message)) {
-          throw new Error(
-            'AWS credentials in frontend/.env.local are expired. Refresh AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN, then restart the dev server.',
-          );
-        }
-        return false;
-      }
+    async signIn() {
+      return true;
     },
     async jwt({ token, account, profile }) {
       if (account && profile) {
