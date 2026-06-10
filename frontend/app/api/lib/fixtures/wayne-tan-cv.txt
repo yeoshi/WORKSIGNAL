@@ -1,0 +1,58 @@
+WAYNE TAN JUNHENG
+Year 2 Computer Science at National University of Singapore
+NUS Merit Scholarship
+KEY SKILLS
+Languages: Advanced: Java;  
+                           Intermediate: HTML, CSS, JavaScript, Python, SQL
+Frameworks: React, React Native, FastAPI, Bootstrap, TailwindCSS
+Libraries: NumPy, Matplotlib, Pandas
+Tools and Software: Git, Docker, Google Cloud Platform (Compute Engine,
+Cloud Run, Cloud Logging)
+Others: API Integration, Prompt Engineering, DevOps 
+EDUCATION
+2020 - 2021
+International Baccalaureate Diploma Programme
+Anglo Chinese School (Independent), Grade: 44/45
+ 
+Vice Chairperson of Kidscanplay!, Peer Helper of ACSI
+Awards: Edusave Award for Achievement, Good Leadership and Service
+(EAGLES Award), Distinction for International Chemistry Quiz , Edusave
+Scholarship for Independent Schools (2020), Vice Captain ACSI Canoeing
+Aug 2024 - Present
+Bachelor of Computer Science 
+NUS Fintech Project Management Executive, Machine Learning Analyst, Tembusu
+Finlit Interest Group Head, NUS Computing Club Finance Secretary (FOW). 
+Orbital - Developed TravelBuddy, a web app that generates users optimized
+multi-day itineraries from selected locations and enables itinerary sharing.
+WORK
+EXPERIENCE
+April 2024 - June 2024Tech Intern at CLS Property Management Services
+Deployed an open source local LLM on Google Cloud for Internal Use
+Created a VBA Tool (Macros) using Excel to store customer’s data, generate
+invoice and streamlined tax processes.
+Used Python to clean internal data and generate graphs using Plotly and Seaborn 
+SUMMARY
+Year  2  Computer  Science  undergraduate  at  NUS.  Experienced  in  developing  web
+applications  using  React,  FastAPI,  PostgreSQL,  TailwindCSS,  and  Node.js,  with  a
+strong interest in building innovative solutions to boost productivity. 
+waynetanjunheng@gmail.com
+www.linkedin.com/in/wayne-
+tan-junheng
+National University of Singapore
+github.com/waynetanjh
+Software Engineering Intern at Lenor
+May 2025 - July 2025
+Tech Stack to build the Web App: MongoDB, ExpressJS, React, NodeJS, Javascript 
+Redesigned and localized the prompt chaining mechanism to better handle the
+nuances of Chinese syntax and tone for improved grading accuracy.
+Integrated modular LLM prompts with structured reasoning steps, simulating multi-
+stage agent workflows
+Used Docker and GitHub to collaborate with a team of 6 developers 
+CoFounder | Founding Engineer of CallBridgeJuly 2025 - Present
+Developed an application that empowers deaf or hard of hearing individuals to
+make phone calls through text-to-speech and speech-to-text conversion.
+Built the frontend using React Native with Expo Go and TailwindCSS
+Designed and deployed a FastAPI backend on Google Cloud VM, secured with JWT
+authentication and HTTPS via Google-managed SSL, supporting multi-client
+concurrent realtime sessions using Google Cloud’s load balancer
+Integrated Supabase PostgreSQL for authentication, user profiles and data storage

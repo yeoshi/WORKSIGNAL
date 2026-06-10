@@ -24,7 +24,21 @@
  * persistent failure surfaces as a `ParseFailure`.
  */
 
-import { ParseFailure, type ParsedProfile, type ResumeParser } from '@worksignal/shared';
+import {
+  ParseFailure,
+  type EducationEntry,
+  type HonorAwardEntry,
+  type LanguageProficiency,
+  type LanguageSkillEntry,
+  type ParsedProfile,
+  type ProjectEntry,
+  type ResumeBasicInfo,
+  type ResumeParser,
+  type SnsLinkEntry,
+  type SnsPlatform,
+  type WorkExperienceEntry,
+  type WorkSampleEntry,
+} from '@worksignal/shared';
 import {
   invokeWithBoundedRetry,
   type RateLimitPredicate,
@@ -75,16 +89,35 @@ function buildExtractionPrompt(pdfBase64: string): string {
     'You are a resume parser. Extract a structured profile from the resume PDF',
     'provided below (base64-encoded application/pdf).',
     '',
-    'Return ONLY a single JSON object — no prose, no markdown — with exactly',
-    'these keys:',
+    'Return ONLY a single JSON object — no prose, no markdown — with these keys:',
     '  - "current_role": string (most recent / current job title)',
     '  - "years_experience": number (total years of professional experience)',
     '  - "skills": array of strings',
     '  - "education": string (highest qualification)',
     '  - "university": string (institution name)',
+    '  - "basic_info": { "full_name", "mobile", "email", "preferred_location" }',
+    '  - "education_history": [{ "school", "faculty", "degree", "field_of_study", "start", "end" }]',
+    '  - "work_experience": [{ "company", "title", "start", "end", "description" }]',
+    '  - "internships": [{ "company", "title", "start", "end", "description" }]',
+    '  - "projects": [{ "project_name", "title", "start", "end", "url", "description" }]',
+    '  - "work_samples": [{ "url", "description" }]',
+    '  - "honors_awards": [{ "title", "date", "description" }]',
+    '  - "languages": [{ "language", "proficiency" }]',
+    '  - "self_introduction": string',
+    '  - "sns_links": [{ "platform", "url" }] where platform is linkedin|github|portfolio|twitter|other',
     '',
-    'If a field is unknown, use an empty string for string fields, 0 for',
-    'years_experience, and an empty array for skills.',
+    'Use YYYY-MM for dates, "Present" for ongoing roles, and set preferred_location to',
+    '"Singapore" when the resume is Singapore-based. Route internship titles to',
+    '"internships". If a field is unknown, use empty strings, 0, or empty arrays.',
+    '',
+    'Resumes use varied layouts. Recognise all of these work-entry formats:',
+    '  - Pipe: "Company | Title Month YYYY - Present"',
+    '  - Comma: "Title, Company, LocationMonth YYYY - Present" (location may be glued to the date)',
+    '  - Block: title on line 1, company on line 2, "Month YYYY - Present" on line 3',
+    '  - At-company: "Month YYYY - Month YYYY Title at Company"',
+    '  - Title-of: "CoFounder | Founding Engineer of CallBridge July YYYY - Present"',
+    'Section headings may differ (EXPERIENCE, WORK EXPERIENCE, KEY SKILLS, PROFILE).',
+    'Names may be ALL CAPS; phones may use "HP:" or 8-digit Singapore numbers.',
     '',
     'Resume PDF (base64):',
     pdfBase64,
@@ -101,15 +134,157 @@ function stripCodeFence(text: string): string {
   return fence && fence[1] !== undefined ? fence[1].trim() : trimmed;
 }
 
+function isStringRecord(
+  value: unknown,
+  keys: string[],
+): value is Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return keys.every((key) => typeof record[key] === 'string');
+}
+
+function parseBasicInfo(value: unknown): ResumeBasicInfo | undefined {
+  if (
+    !isStringRecord(value, ['full_name', 'mobile', 'email', 'preferred_location'])
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
+function parseWorkEntries(value: unknown): WorkExperienceEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: WorkExperienceEntry[] = [];
+  for (const item of value) {
+    if (!isStringRecord(item, ['company', 'title', 'start', 'end', 'description'])) {
+      return undefined;
+    }
+    entries.push(item);
+  }
+  return entries;
+}
+
+function parseEducationHistory(value: unknown): EducationEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: EducationEntry[] = [];
+  for (const item of value) {
+    if (
+      !isStringRecord(item, [
+        'school',
+        'faculty',
+        'degree',
+        'field_of_study',
+        'start',
+        'end',
+      ])
+    ) {
+      return undefined;
+    }
+    entries.push(item);
+  }
+  return entries;
+}
+
+function parseProjects(value: unknown): ProjectEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: ProjectEntry[] = [];
+  for (const item of value) {
+    if (
+      !isStringRecord(item, [
+        'project_name',
+        'title',
+        'start',
+        'end',
+        'url',
+        'description',
+      ])
+    ) {
+      return undefined;
+    }
+    entries.push(item);
+  }
+  return entries;
+}
+
+function parseWorkSamples(value: unknown): WorkSampleEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: WorkSampleEntry[] = [];
+  for (const item of value) {
+    if (!isStringRecord(item, ['url', 'description'])) return undefined;
+    entries.push(item);
+  }
+  return entries;
+}
+
+function parseHonors(value: unknown): HonorAwardEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: HonorAwardEntry[] = [];
+  for (const item of value) {
+    if (!isStringRecord(item, ['title', 'date', 'description'])) return undefined;
+    entries.push(item);
+  }
+  return entries;
+}
+
+const LANGUAGE_PROFICIENCIES = new Set<LanguageProficiency>([
+  'native_or_bilingual',
+  'professional_working',
+  'limited_working',
+  'elementary',
+]);
+
+function parseLanguages(value: unknown): LanguageSkillEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: LanguageSkillEntry[] = [];
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return undefined;
+    }
+    const record = item as Record<string, unknown>;
+    if (typeof record.language !== 'string') return undefined;
+    if (!LANGUAGE_PROFICIENCIES.has(record.proficiency as LanguageProficiency)) {
+      return undefined;
+    }
+    entries.push({
+      language: record.language,
+      proficiency: record.proficiency as LanguageProficiency,
+    });
+  }
+  return entries;
+}
+
+const SNS_PLATFORMS = new Set<SnsPlatform>([
+  'linkedin',
+  'github',
+  'portfolio',
+  'twitter',
+  'other',
+]);
+
+function parseSnsLinks(value: unknown): SnsLinkEntry[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries: SnsLinkEntry[] = [];
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return undefined;
+    }
+    const record = item as Record<string, unknown>;
+    if (typeof record.url !== 'string') return undefined;
+    if (!SNS_PLATFORMS.has(record.platform as SnsPlatform)) return undefined;
+    entries.push({
+      platform: record.platform as SnsPlatform,
+      url: record.url,
+    });
+  }
+  return entries;
+}
+
 /**
  * Validate and normalise a raw parsed JSON value into a {@link ParsedProfile}.
  * Returns `null` when the value is not an object or any required field is
  * missing or of the wrong type. Exported for unit testing (task 11.5).
- *
- * Field rules:
- *  - `current_role`, `education`, `university`: must be strings.
- *  - `years_experience`: must be a finite, non-negative number.
- *  - `skills`: must be an array of strings.
  */
 export function validateParsedProfile(raw: unknown): ParsedProfile | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -135,12 +310,59 @@ export function validateParsedProfile(raw: unknown): ParsedProfile | null {
     return null;
   }
 
+  const basicInfo = parseBasicInfo(obj.basic_info);
+  if (obj.basic_info !== undefined && basicInfo === undefined) return null;
+
+  const educationHistory = parseEducationHistory(obj.education_history);
+  if (obj.education_history !== undefined && educationHistory === undefined) {
+    return null;
+  }
+
+  const workExperience = parseWorkEntries(obj.work_experience);
+  if (obj.work_experience !== undefined && workExperience === undefined) {
+    return null;
+  }
+
+  const internships = parseWorkEntries(obj.internships);
+  if (obj.internships !== undefined && internships === undefined) return null;
+
+  const projects = parseProjects(obj.projects);
+  if (obj.projects !== undefined && projects === undefined) return null;
+
+  const workSamples = parseWorkSamples(obj.work_samples);
+  if (obj.work_samples !== undefined && workSamples === undefined) return null;
+
+  const honorsAwards = parseHonors(obj.honors_awards);
+  if (obj.honors_awards !== undefined && honorsAwards === undefined) return null;
+
+  const languages = parseLanguages(obj.languages);
+  if (obj.languages !== undefined && languages === undefined) return null;
+
+  const snsLinks = parseSnsLinks(obj.sns_links);
+  if (obj.sns_links !== undefined && snsLinks === undefined) return null;
+
+  if (obj.self_introduction !== undefined && typeof obj.self_introduction !== 'string') {
+    return null;
+  }
+
   return {
     current_role,
     years_experience,
     skills: skills as string[],
     education,
     university,
+    ...(basicInfo ? { basic_info: basicInfo } : {}),
+    ...(educationHistory ? { education_history: educationHistory } : {}),
+    ...(workExperience ? { work_experience: workExperience } : {}),
+    ...(internships ? { internships } : {}),
+    ...(projects ? { projects } : {}),
+    ...(workSamples ? { work_samples: workSamples } : {}),
+    ...(honorsAwards ? { honors_awards: honorsAwards } : {}),
+    ...(languages ? { languages } : {}),
+    ...(typeof obj.self_introduction === 'string'
+      ? { self_introduction: obj.self_introduction }
+      : {}),
+    ...(snsLinks ? { sns_links: snsLinks } : {}),
   };
 }
 

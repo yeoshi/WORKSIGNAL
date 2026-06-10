@@ -27,6 +27,10 @@ vi.mock('./steps/ResumeUploadStep', () => ({
   ResumeUploadStep: () => <div data-testid="resume-step">Resume step</div>,
 }));
 
+vi.mock('./steps/ResumeConfirmStep', () => ({
+  ResumeConfirmStep: () => <div data-testid="confirm-step">Confirm step</div>,
+}));
+
 vi.mock('./steps/AboutYouStep', () => ({
   AboutYouStep: () => <div data-testid="about-step">About step</div>,
 }));
@@ -60,12 +64,28 @@ describe('OnboardingPage', () => {
     expect(screen.getByText('Resume')).toBeInTheDocument();
   });
 
+  it('shows confirm step when resume is uploaded but not confirmed', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated' });
+    vi.mocked(fetchOnboardingState).mockResolvedValue({
+      resume_s3_key: 'resumes/demo.pdf',
+    });
+
+    render(<OnboardingPage />);
+
+    expect(await screen.findByTestId('confirm-step')).toBeInTheDocument();
+  });
+
   it('redirects completed users to the dashboard', async () => {
     mockUseSession.mockReturnValue({ status: 'authenticated' });
     vi.mocked(fetchOnboardingState).mockResolvedValue({
       career_stage: 'early_career',
       residency_status: 'citizen',
       profile: {
+        current_role: 'Analyst',
+        years_experience: 2,
+        skills: [],
+        education: '',
+        university: '',
         target_roles: ['Product Manager'],
         priority_ranking: [
           'salary',

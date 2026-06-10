@@ -14,6 +14,78 @@ import type {
   WorkArrangement,
 } from './enums.js';
 
+/** Contact and location details extracted from a resume (Req 2.2). */
+export interface ResumeBasicInfo {
+  full_name: string;
+  mobile: string;
+  email: string;
+  preferred_location: string;
+}
+
+/** A single education history entry (Req 2.2). */
+export interface EducationEntry {
+  school: string;
+  faculty: string;
+  degree: string;
+  field_of_study: string;
+  /** "YYYY-MM" */
+  start: string;
+  /** "YYYY-MM" or "Present" */
+  end: string;
+}
+
+/** A single work or internship experience entry (Req 2.2). */
+export interface WorkExperienceEntry {
+  company: string;
+  title: string;
+  start: string;
+  end: string;
+  description: string;
+}
+
+/** A single project experience entry (Req 2.2). */
+export interface ProjectEntry {
+  project_name: string;
+  title: string;
+  start: string;
+  end: string;
+  url: string;
+  description: string;
+}
+
+/** A single work sample link entry (Req 2.2). */
+export interface WorkSampleEntry {
+  url: string;
+  description: string;
+}
+
+/** A single honor or award entry (Req 2.2). */
+export interface HonorAwardEntry {
+  title: string;
+  date: string;
+  description: string;
+}
+
+export type LanguageProficiency =
+  | 'native_or_bilingual'
+  | 'professional_working'
+  | 'limited_working'
+  | 'elementary';
+
+/** A single language proficiency entry (Req 2.2). */
+export interface LanguageSkillEntry {
+  language: string;
+  proficiency: LanguageProficiency;
+}
+
+export type SnsPlatform = 'linkedin' | 'github' | 'portfolio' | 'twitter' | 'other';
+
+/** A single social/portfolio link entry (Req 2.2). */
+export interface SnsLinkEntry {
+  platform: SnsPlatform;
+  url: string;
+}
+
 /** Structured profile extracted from a resume by the Resume_Parser (Req 2.2). */
 export interface ParsedProfile {
   current_role: string;
@@ -21,6 +93,16 @@ export interface ParsedProfile {
   skills: string[];
   education: string;
   university: string;
+  basic_info?: ResumeBasicInfo;
+  education_history?: EducationEntry[];
+  work_experience?: WorkExperienceEntry[];
+  internships?: WorkExperienceEntry[];
+  projects?: ProjectEntry[];
+  work_samples?: WorkSampleEntry[];
+  honors_awards?: HonorAwardEntry[];
+  languages?: LanguageSkillEntry[];
+  self_introduction?: string;
+  sns_links?: SnsLinkEntry[];
 }
 
 /**
@@ -97,6 +179,9 @@ export interface UserConfig {
   email: string;
   name: string;
   resume_s3_key?: string;
+  /** Optional sample cover letter used to match tone when generating new letters. */
+  cover_letter_sample_s3_key?: string;
+  cover_letter_sample_text?: string;
   career_stage: CareerStage;
   residency_status: ResidencyStatus;
   career_switch_context?: CareerSwitchContext;

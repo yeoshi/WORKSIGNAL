@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut, useSession } from 'next-auth/react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Logo } from '../ui/Logo';
 
@@ -38,6 +39,13 @@ export function TopBar() {
                 onClick={() => setMenuOpen(false)}
               />
               <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-ws-line bg-ws-card py-1 shadow-card">
+                <Link
+                  href="/profile"
+                  className="block w-full px-4 py-2 text-left text-sm text-ws-ink hover:bg-ws-paper"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Profile
+                </Link>
                 <button
                   type="button"
                   className="block w-full px-4 py-2 text-left text-sm text-ws-ink hover:bg-ws-paper"

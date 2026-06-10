@@ -1,6 +1,6 @@
 /**
- * Persists a successful Google OAuth sign-in via AuthServiceImpl and decides
- * whether the user should be sent to onboarding (first sign-in only).
+ * Persists a successful Google OAuth sign-in and decides whether the user
+ * should be sent to onboarding (first sign-in only).
  */
 
 import {
@@ -10,6 +10,11 @@ import {
   type AuthUserRecord,
 } from '@worksignal/backend';
 import type { DynamoDBWrapper } from '@worksignal/shared';
+import {
+  ensureLocalAuthUser,
+  getLocalUser,
+  isLocalOnboardingEnabled,
+} from '../lib/localOnboardingStore';
 
 export interface OAuthSignInInput {
   profile: {
@@ -28,7 +33,6 @@ export interface OAuthSignInInput {
 
 export interface OAuthSignInResult {
   isNewUser: boolean;
-  /** When set, NextAuth should redirect here after sign-in. */
   redirectUrl: string | null;
 }
 
@@ -38,6 +42,19 @@ export async function persistOAuthSignIn(
   const sub = input.profile.sub?.trim();
   if (!sub) {
     throw new Error('OAuth profile is missing a subject identifier.');
+  }
+
+  const email = input.profile.email?.trim() ?? '';
+  const name = input.profile.name ?? '';
+
+  if (isLocalOnboardingEnabled()) {
+    const existing = getLocalUser(sub);
+    ensureLocalAuthUser({ userId: sub, email, name });
+    const isNewUser = existing === null;
+    return {
+      isNewUser,
+      redirectUrl: isNewUser ? '/onboarding' : null,
+    };
   }
 
   const existing = await input.db.get<AuthUserRecord>(USERS_TABLE, {
@@ -53,11 +70,7 @@ export async function persistOAuthSignIn(
   });
 
   await authService.onCallback(
-    {
-      sub,
-      email: input.profile.email?.trim() ?? '',
-      name: input.profile.name ?? '',
-    },
+    { sub, email, name },
     {
       accessToken: input.account.access_token ?? '',
       refreshToken: input.account.refresh_token ?? undefined,

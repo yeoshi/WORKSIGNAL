@@ -17,6 +17,7 @@
 import type {
   CareerStage,
   NonNegotiables,
+  ParsedProfile,
   PriorityFactor,
   ResidencyStatus,
 } from '@worksignal/shared';
@@ -81,8 +82,86 @@ export async function beginGoogleSignIn(): Promise<ApiResult> {
   });
 }
 
+export interface ResumeUploadData {
+  s3Key?: string;
+  profile?: ParsedProfile | null;
+  parseFailed?: boolean;
+}
+
+export interface CoverLetterUploadData {
+  s3Key?: string;
+  sampleText?: string;
+}
+
+/** Upload an optional cover letter sample PDF for tone matching. */
+export async function uploadCoverLetter(
+  file: File,
+): Promise<ApiResult<CoverLetterUploadData>> {
+  try {
+    const form = new FormData();
+    form.append('cover_letter', file);
+    const res = await fetch('/api/onboarding/cover-letter', {
+      method: 'POST',
+      body: form,
+    });
+    if (res.status === 404) {
+      return {
+        ok: false,
+        pending: true,
+        message: 'Cover letter upload API is unavailable. Restart the dev server and try again.',
+      };
+    }
+    if (!res.ok) {
+      return { ok: false, message: await safeErrorMessage(res) };
+    }
+    const data = (await safeJson(res)) as CoverLetterUploadData | undefined;
+    return { ok: true, data };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Network error';
+    return {
+      ok: false,
+      pending: true,
+      message: `Could not reach the server (${detail}). Is the dev server running?`,
+    };
+  }
+}
+
+/** Remove the stored resume PDF for the authenticated user. */
+export async function removeResume(): Promise<ApiResult> {
+  try {
+    const res = await fetch('/api/onboarding/resume', { method: 'DELETE' });
+    if (res.status === 404) {
+      return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+    }
+    if (!res.ok) {
+      return { ok: false, message: await safeErrorMessage(res) };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+  }
+}
+
+/** Remove the stored cover letter sample for the authenticated user. */
+export async function removeCoverLetter(): Promise<ApiResult> {
+  try {
+    const res = await fetch('/api/onboarding/cover-letter', { method: 'DELETE' });
+    if (res.status === 404) {
+      return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+    }
+    if (!res.ok) {
+      return { ok: false, message: await safeErrorMessage(res) };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+  }
+}
+
 /** Upload a resume PDF to the Onboarding_Service (Req 2.1). */
-export async function uploadResume(file: File): Promise<ApiResult<{ s3Key: string }>> {
+export async function uploadResume(
+  file: File,
+): Promise<ApiResult<ResumeUploadData>> {
   try {
     const form = new FormData();
     form.append('resume', file);
@@ -91,16 +170,34 @@ export async function uploadResume(file: File): Promise<ApiResult<{ s3Key: strin
       body: form,
     });
     if (res.status === 404) {
-      return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+      return {
+        ok: false,
+        pending: true,
+        message: 'Resume upload API is unavailable. Restart the dev server and try again.',
+      };
     }
     if (!res.ok) {
       return { ok: false, message: await safeErrorMessage(res) };
     }
-    const data = (await safeJson(res)) as { s3Key: string } | undefined;
+    const data = (await safeJson(res)) as ResumeUploadData | undefined;
     return { ok: true, data };
-  } catch {
-    return { ok: false, pending: true, message: 'Endpoint not available yet.' };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Network error';
+    return {
+      ok: false,
+      pending: true,
+      message: `Could not reach the server (${detail}). Is the dev server running?`,
+    };
   }
+}
+
+/** Confirm parsed or manual resume profile (Req 2.2, 2.4). */
+export type ResumeProfilePayload = ParsedProfile & { resume_s3_key?: string };
+
+export async function saveResumeProfile(
+  payload: ResumeProfilePayload,
+): Promise<ApiResult> {
+  return postJson('/api/onboarding/resume-details', payload);
 }
 
 /** Persist career stage, residency, and optional switch context (Req 3). */

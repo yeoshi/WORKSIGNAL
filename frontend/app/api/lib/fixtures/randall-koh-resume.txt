@@ -1,0 +1,94 @@
+RANDALL KOH
+HP: 87810680      Email: e1398303@u.nus.edu
+PROFILE
+NUS Computer Science & Mathematics undergraduate passionate about building impactful 
+technology with AI. Currently co-developing CallBridge, an accessibility app for the deaf under 
+OGP’s Build for Good accelerator. Aspiring Software Engineer with experience in full-stack 
+development, machine learning systems, and AI-driven product design. Skilled in applying deep 
+learning, NLP, and model deployment to create user-centric solutions.
+ 
+SKILLS
+   Frontend Languages: NextJS, React, React Native, Expo Go, HTML, CSS, Tailwind 
+CSS 
+   Backend Languages: Python (FastAPI), Java, Node.js, Supabase, Prisma
+   Tools & Others: Git, REST APIs, WebSockets, Postgres, CI/CD
+ 
+WORK EXPERIENCE
+AI Engineer, Cynapse.ai, SingaporeDec 2025 - Present
+   Incoming AI Engineer Intern (Computer Vision)
+   Developed and refined CV models end-to-end: dataset preprocessing, model training, 
+hyperparameter tuning, and performance evaluation.
+   Contributed to ML Ops workflows involving automated retraining, data versioning, and 
+model deployment (Docker, CI/CD, cloud). 
+   Performed experiments and error analysis to improve accuracy, scalability, and real-
+time performance.
+ 
+Co-founder / Software Engineer, CallBridge, SingaporeJun 2025 - Present
+   Built an accessibility-focused mobile application enabling real-time speech-to-text and 
+text-to-speech communication for deaf users, using Twilio, React Native, and FastAPI 
+to bridge phone calls across hearing and non-hearing communities.
+   Won 2025 Community Hackathon, earning 20,000 dollars in funding, as well as being 
+accepted into the Build for Good accelerator organised by Open Government Products
+ 
+Machine Learning Analyst, NUS Fintech SocietyJul 2025 - Present
+   Applied statistical analysis, data preprocessing, and machine learning techniques in 
+Python to build end-to-end models using Scikit-learn. Implemented regression, 
+classification, ensemble methods, reinforcement learning, deep learning (CNNs, 
+transfer learning), and NLP with transformers. Deployed models on web platforms, 
+practiced CI/CD and MLOps workflows, and delivered a capstone project demonstrating 
+real-world AI applications
+ 
+Research Assistant, NUS School of ComputingJul 2025 - Present
+   Worked as a Research Assistant on Human-AI Songwriter, developing a web-based co-
+creation system for music therapy. Applied natural language processing for lyric 
+generation, audio-to-pitch and shape-to-melody models for motif capture, and deep 
+learning techniques for melody/harmony generation aligned to mood and structure. Built 
+full-stack ML pipelines with Python (FastAPI), Next.js, and Supabase, delivering a 
+prototype that enabled real-time human-AI collaboration in songwriting
+
+ 
+EDUCATION
+National University of SingaporeAug 2024 - Aug 2028
+Bachelor of Computing in Computer Science
+   First Class Honours 
+   Academic Highlights: A+ in ACC1701X (Accounting), GEA1000 (Data Literacy); A in 
+CS2030S (Object Oriented Programming), MA1521 (Calculus); A− in CS1101S 
+(Programming Methodology), CS1231S (Discrete Structures), MA1522 (Linear Algebra)
+ 
+Raffles InstitutionJan 2016 - Dec 2021
+GCE 'A' Level, Physics, Chemistry, Math, Economics
+Attained AAA/A for GCSE "A" Levels
+Earned the Academic Excellence Award in 2020
+ 
+PROJECTS
+CallBridge - Accessibility Communication App
+   Developed a mobile app using React Native, Expo, and FastAPI to support real-time 
+voice-to-text and text-to-speech phone calls for deaf users.
+   Integrated Twilio Programmable Voice for VoIP call handling and Assembly AI for live 
+speech transcription.
+   Implemented bidirectional communication via WebSockets, with quick reply support and 
+optional AI-generated call summaries.
+   Designed a scalable backend to handle multi-user call routing via a shared Singaporean 
+number and session-level control.
+ 
+TravelLah! - Group Travel Planning Web App
+   Built a full-stack web app using Next.js 13+, TypeScript, React, Tailwind CSS, with a 
+Prisma + Supabase backend.
+   Implemented core features like real-time itinerary planning, group expense splitting, and 
+event labeling with dynamic UI updates.
+ 
+Bloom - AI-Powered Curriculum Builder
+   Created a web platform for teachers to upload textbooks and generate personalized 
+curriculums using OpenAI API and Prisma.
+ 
+EXTRA-CURRICULAR ACTIVITIES
+   tMentors, Head of Mentoring Group:  Led a college-based mentorship initiative 
+supporting secondary school students in their academic and personal development. 
+Oversaw the design and delivery of tutoring programs, provided one-on-one guidance, 
+and coordinated a team of mentors to ensure consistent and impactful support.
+   NUS Enterprise Summer Programme: Awarded a scholarship to participate in the NUS 
+Enterprise Summer Programme, an intensive experience exploring startup ecosystems, 
+innovation frameworks, and entrepreneurship in Southeast Asia. Engaged in 
+workshops, mentorship sessions, and cultural exchanges focused on building scalable 
+ventures in emerging markets.
+   Football (2020 - 2021)

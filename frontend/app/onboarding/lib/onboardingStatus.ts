@@ -6,20 +6,27 @@ import {
   PRIORITY_FACTORS,
   type CareerStage,
   type NonNegotiables,
+  type ParsedProfile,
   type PriorityFactor,
   type ResidencyStatus,
 } from '@worksignal/shared';
+import { hasConfirmedResumeProfile } from './parsedProfileDefaults';
 
 export type OnboardingRecord = {
   resume_s3_key?: string;
+  cover_letter_sample_s3_key?: string;
   career_stage?: CareerStage;
   residency_status?: ResidencyStatus;
   career_switch_context?: { from: string; to: string };
-  profile?: {
+  profile?: Partial<ParsedProfile> & {
     target_roles?: string[];
+    target_industries?: string[];
+    dream_companies?: string[];
     priority_ranking?: PriorityFactor[];
   };
   target_roles?: string[];
+  target_industries?: string[];
+  dream_companies?: string[];
   priority_ranking?: PriorityFactor[];
   non_negotiables?: NonNegotiables;
 };
@@ -51,9 +58,22 @@ export function isOnboardingComplete(
   return true;
 }
 
+/** Whether the user has enough saved data to open profile settings. */
+export function canAccessProfileSettings(
+  record: OnboardingRecord | null | undefined,
+): boolean {
+  if (!record) return false;
+  return (
+    isOnboardingComplete(record) ||
+    hasConfirmedResumeProfile(record.profile) ||
+    Boolean(record.resume_s3_key) ||
+    Boolean(record.career_stage)
+  );
+}
+
 /**
- * Returns the step index to resume (0 = resume, 1 = about, 2 = targets),
- * or -1 when onboarding is complete.
+ * Returns the step index to resume:
+ * 0 = resume, 1 = confirm, 2 = about you, 3 = targets, -1 = complete.
  */
 export function getOnboardingResumeStep(
   record: OnboardingRecord | null | undefined,
@@ -63,8 +83,14 @@ export function getOnboardingResumeStep(
   }
 
   if (!record?.career_stage || !record?.residency_status) {
-    return record?.resume_s3_key ? 1 : 0;
+    if (hasConfirmedResumeProfile(record?.profile)) {
+      return 2;
+    }
+    if (record?.resume_s3_key) {
+      return 1;
+    }
+    return 0;
   }
 
-  return 2;
+  return 3;
 }

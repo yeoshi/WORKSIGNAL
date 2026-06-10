@@ -93,6 +93,8 @@ export const UsersTable: TableDefinition = {
     { name: 'email', type: 'string' },
     { name: 'name', type: 'string' },
     { name: 'resume_s3_key', type: 'string' },
+    { name: 'cover_letter_sample_s3_key', type: 'string' },
+    { name: 'cover_letter_sample_text', type: 'string' },
     {
       name: 'career_stage',
       type: 'fresh_grad | early_career | mid_career | senior | career_switcher',
