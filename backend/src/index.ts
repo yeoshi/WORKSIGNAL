@@ -61,6 +61,10 @@ export * from './orchestrator/fastTrack.js';
 // --- Master_Orchestrator degraded resolution (Req 22.4, 22.5) ---
 export * from './orchestrator/degradedResolution.js';
 
+// --- Master_Orchestrator enriched resolution + heuristic scoring ---
+export * from './orchestrator/resolveEnriched.js';
+export * from './orchestrator/scoreHeuristic.js';
+
 // --- Onboarding resume upload (PDF validation + S3 storage) ---
 export * from './onboarding/resumeUpload.js';
 

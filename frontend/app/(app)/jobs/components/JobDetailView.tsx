@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { JobHeader } from './JobHeader';
 import { DebateCardList } from './DebateCardList';
 import { DecisionSummary } from './DecisionSummary';
+import { OrchestratorPanel } from './OrchestratorPanel';
 import { ApplicationMaterials } from './ApplicationMaterials';
 import { ActionBar } from './ActionBar';
 import type { JobDetailAction, JobDetailData } from './jobDetailTypes';
@@ -44,7 +45,7 @@ export function JobDetailView({
   isDraftingCoverLetter = false,
   onCustomResumeUploaded,
 }: JobDetailViewProps) {
-  const { job, verdicts, decision, materials } = data;
+  const { job, verdicts, decision, enrichedDecision, materials } = data;
   const [internalCoverLetter, setInternalCoverLetter] = useState(data.coverLetter);
   const coverLetter = controlledCoverLetter ?? internalCoverLetter;
   const setCoverLetter = onCoverLetterChange ?? setInternalCoverLetter;
@@ -76,6 +77,9 @@ export function JobDetailView({
     >
       {!embedded && <JobHeader job={job} />}
       <DebateCardList verdicts={verdicts} />
+      {enrichedDecision?.orchestrator_verdict ? (
+        <OrchestratorPanel enriched={enrichedDecision} delayMs={450} />
+      ) : null}
       <DecisionSummary decision={decision} />
       <ApplicationMaterials
         job={job}

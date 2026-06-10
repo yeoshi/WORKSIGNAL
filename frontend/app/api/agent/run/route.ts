@@ -30,6 +30,22 @@ export type AgentRunEvent =
     | { type: 'agent_failed'; agent: AgentName }
     | { type: 'db_persist'; step: 'verdicts' | 'master_decision'; job_id: string; title: string; verdict_id?: string; decision?: string; stored_agents?: string[] }
     | { type: 'debate_result'; job_id: string; title: string; company: string; decision: string; summary: string | null; verdict_id: string }
+    | {
+        type: 'orchestrator_reasoning';
+        job_id: string;
+        title: string;
+        /** The deterministic decision class before enrichment (e.g. deadlock_escalate). */
+        base_decision: string;
+        /** Score snapshot for each agent: verdict/score string, e.g. "apply/72". */
+        scores: { ambition: string; realism: string; risk: string; opportunity: string };
+        /** The heuristic-resolved action. */
+        action: 'apply' | 'upskill' | 'hold';
+        confidence: number;
+        deciding_factor: string;
+        holistic_summary: string;
+        apply_angle?: string;
+        upskill_targets?: string[];
+      }
     | { type: 'run_complete'; scanned: number; survivors: number; debated: number; elapsed_s: number; tally: Record<string, number> }
     | { type: 'error'; message: string };
 
@@ -87,7 +103,7 @@ async function runPipeline(
 
     // Lazy imports — AWS SDK needs env vars set before use.
     const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, resolveDegraded, isInvalidVerdict } = await import('@worksignal/backend');
+    const { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, hasAnyValidVerdict, resolveEnriched, isInvalidVerdict } = await import('@worksignal/backend');
 
     const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
     const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
@@ -279,27 +295,56 @@ async function runPipeline(
         const storedAgents = (Object.keys(persistResult.verdicts) as string[]);
         console.log(`[AgentRun] ✓ AgentVerdicts written — verdict_id: ${persistResult.verdict_id} | agents: [${storedAgents.join(', ')}]${persistResult.agent_failures.length > 0 ? ` | failures: [${persistResult.agent_failures.join(', ')}]` : ''}`);
 
-        // ── Resolve master decision + update same record ────────────────────
-        const degResult = resolveDegraded(persistResult.verdicts);
-        const decision = degResult.resolved ? degResult.decision : null;
-        const dec = decision?.decision ?? 'no_decision';
+        // ── Resolve master decision (enriched) + update same record ───────
+        const verdictSet = persistResult.verdicts;
 
-        if (decision) {
-            console.log(`[AgentRun] ⏳ Writing master_decision: "${dec}" → verdict_id: ${persistResult.verdict_id}`);
-            await emit({ type: 'db_persist', step: 'master_decision', job_id: job.job_id, title: job.role_title, verdict_id: persistResult.verdict_id, decision: dec, stored_agents: storedAgents });
-
-            await db.update(
-                'AgentVerdicts',
-                { verdict_id: persistResult.verdict_id },
-                {
-                    UpdateExpression: 'SET master_decision = :md',
-                    ExpressionAttributeValues: { ':md': decision },
-                },
-            );
-            console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
-        } else {
-            console.log(`[AgentRun] ⚠ No master decision (degraded — no valid verdicts for ${job.job_id})`);
+        if (!hasAnyValidVerdict(verdictSet)) {
+            console.log(`[AgentRun] ⚠ No master decision (no valid verdicts for ${job.job_id})`);
+            tally['no_decision'] = (tally['no_decision'] ?? 0) + 1;
+            await emit({ type: 'debate_result', job_id: job.job_id, title: job.role_title, company: job.company, decision: 'no_decision', summary: null, verdict_id: persistResult.verdict_id });
+            continue;
         }
+
+        const enriched = await resolveEnriched({ verdicts: verdictSet, user: userConfig, job, bedrock });
+        const decision = enriched;
+        const dec = decision.decision ?? 'no_decision';
+
+        // Emit orchestrator reasoning event when the reasoning pass fired
+        if (enriched.orchestrator_verdict) {
+            const ov = enriched.orchestrator_verdict;
+            const scores = {
+                ambition:    verdictSet.ambition    ? `${verdictSet.ambition.verdict}/${verdictSet.ambition.ambition_score}`       : 'missing',
+                realism:     verdictSet.realism     ? `${verdictSet.realism.verdict}/${verdictSet.realism.match_score}`            : 'missing',
+                risk:        verdictSet.risk        ? `${verdictSet.risk.verdict}/${verdictSet.risk.risk_score}`                   : 'missing',
+                opportunity: verdictSet.opportunity ? `${verdictSet.opportunity.verdict}/${verdictSet.opportunity.urgency_score}`  : 'missing',
+            };
+            await emit({
+                type: 'orchestrator_reasoning',
+                job_id: job.job_id,
+                title: job.role_title,
+                base_decision: dec,
+                scores,
+                action: ov.action,
+                confidence: ov.confidence,
+                deciding_factor: ov.deciding_factor,
+                holistic_summary: ov.holistic_summary,
+                ...(ov.apply_angle && { apply_angle: ov.apply_angle }),
+                ...(ov.upskill_targets && { upskill_targets: ov.upskill_targets }),
+            });
+        }
+
+        console.log(`[AgentRun] ⏳ Writing master_decision: "${dec}" → verdict_id: ${persistResult.verdict_id}`);
+        await emit({ type: 'db_persist', step: 'master_decision', job_id: job.job_id, title: job.role_title, verdict_id: persistResult.verdict_id, decision: dec, stored_agents: storedAgents });
+
+        await db.update(
+            'AgentVerdicts',
+            { verdict_id: persistResult.verdict_id },
+            {
+                UpdateExpression: 'SET master_decision = :md',
+                ExpressionAttributeValues: { ':md': decision },
+            },
+        );
+        console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
 
         tally[dec] = (tally[dec] ?? 0) + 1;
 
