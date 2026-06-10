@@ -439,6 +439,20 @@ export function AgentRunModal({ open, state, events, onClose }: AgentRunModalPro
     const rendered = renderEvents(events);
     const isEmpty = rendered.length === 0;
 
+    const waitingMessage = (() => {
+        const last = events[events.length - 1];
+        if (!last) return 'Connecting to pipeline…';
+        if (last.type === 'start') return 'Loading agent modules…';
+        if (last.type === 'scan_start') return 'Scanning MyCareersFuture for matching roles…';
+        if (last.type === 'scan_complete') {
+            return last.count === 0
+                ? 'No new jobs matched this scan. Wrapping up…'
+                : 'Filtering jobs against your preferences…';
+        }
+        if (last.type === 'prefilter_summary') return 'Starting agent debate…';
+        return 'Running pipeline…';
+    })();
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-end justify-end sm:items-start sm:justify-end p-0 sm:p-4"
@@ -504,7 +518,7 @@ export function AgentRunModal({ open, state, events, onClose }: AgentRunModalPro
                     {isEmpty && state === 'running' && (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <span className="h-8 w-8 animate-spin rounded-full border-2 border-ws-teal border-t-transparent" />
-                            <p className="text-sm text-ws-muted">Connecting to pipeline…</p>
+                            <p className="text-sm text-ws-muted">{waitingMessage}</p>
                         </div>
                     )}
 

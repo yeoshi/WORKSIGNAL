@@ -12,8 +12,40 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { getAwsRegion } from '../../lib/awsRegion';
-import { loadBackendModule } from '../../lib/loadWorkspaceModule';
+import { loadAgentBackendModules } from '../../lib/agentBackend';
 import { DEMO_MODE } from '../../lib/demo';
+
+const MCF_FETCH_TIMEOUT_MS = 45_000;
+const MODULE_LOAD_TIMEOUT_MS = 90_000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MCF_FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -67,6 +99,8 @@ export async function GET() {
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
 
+    const modulesReady = loadAgentBackendModules();
+
     const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const writer = writable.getWriter();
@@ -80,7 +114,7 @@ export async function GET() {
     };
 
     // Run pipeline in background; stream stays open until it completes.
-    runPipeline(user.userId, user.name ?? 'User', emit)
+    runPipeline(user.userId, user.name ?? 'User', emit, modulesReady)
         .catch(async (err) => {
             const msg = err instanceof Error ? err.message : String(err);
             await emit({ type: 'error', message: msg });
@@ -103,6 +137,7 @@ async function runPipeline(
     userId: string,
     userName: string,
     emit: (e: AgentRunEvent) => Promise<void>,
+    modulesReady: ReturnType<typeof loadAgentBackendModules>,
 ): Promise<void> {
     const { randomUUID } = await import('node:crypto');
     const runId = randomUUID();
@@ -110,29 +145,23 @@ async function runPipeline(
     await emit({ type: 'start', run_id: runId, user_name: userName });
 
     const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
-    const [
-        { createOpportunityScanner },
-        { preFilter },
-        { runAmbitionAgent },
-        { runRealismAgent },
-        { runRiskAgent },
-        { runOpportunityAgent },
-        { persistAgentVerdicts },
-        { hasAnyValidVerdict },
-        { resolveEnriched },
-        { isInvalidVerdict },
-    ] = await Promise.all([
-        loadBackendModule('discovery/opportunityScanner.ts'),
-        loadBackendModule('preFilter/preFilter.ts'),
-        loadBackendModule('debate/agents/ambition.ts'),
-        loadBackendModule('debate/agents/realism.ts'),
-        loadBackendModule('debate/agents/risk.ts'),
-        loadBackendModule('debate/agents/opportunity.ts'),
-        loadBackendModule('debate/verdictPersistence.ts'),
-        loadBackendModule('orchestrator/degradedResolution.ts'),
-        loadBackendModule('orchestrator/resolveEnriched.ts'),
-        loadBackendModule('debate/verdictValidator.ts'),
-    ]);
+    const {
+        createOpportunityScanner,
+        preFilter,
+        runAmbitionAgent,
+        runRealismAgent,
+        runRiskAgent,
+        runOpportunityAgent,
+        persistAgentVerdicts,
+        hasAnyValidVerdict,
+        resolveEnriched,
+        isInvalidVerdict,
+    } = await withTimeout(
+        modulesReady,
+        MODULE_LOAD_TIMEOUT_MS,
+        'Agent modules took too long to load. Restart the dev server and try again.',
+    );
+    await emit({ type: 'scan_start' });
     const { generateAndPersistJobMaterials, shouldGenerateJobMaterials } = await import('../../lib/jobMaterialsGeneration');
     const { serializeUserProfileFromRecord } = await import('../../lib/serializeUserProfile');
 
@@ -214,9 +243,11 @@ async function runPipeline(
     // ── STEP 1: Scan ────────────────────────────────────────────────────────
     console.log(`[AgentRun] ─────────────────────────────────────────`);
     console.log(`[AgentRun] 🚀 Pipeline started — run_id: ${runId} | user: ${userName} (${userId})`);
-    await emit({ type: 'scan_start' });
     console.log(`[AgentRun] 🔍 Scanning MCF…`);
-    const scanner = createOpportunityScanner({ scanIntervalMs: 0 });
+    const scanner = createOpportunityScanner({
+        scanIntervalMs: 0,
+        fetchFn: fetchWithTimeout,
+    });
     const discovered = await scanner.scan(userId);
 
     const salaryStr = (min: number, max: number) => {

@@ -33,6 +33,12 @@ function getMonorepoRoot(): string {
 
 export async function loadBackendModule<T>(relativePath: string): Promise<T> {
   await ensureTsxRegistered();
-  const abs = path.join(getMonorepoRoot(), 'backend/src', relativePath);
+  const root = getMonorepoRoot();
+  const abs = path.join(root, 'backend/src', relativePath);
+  if (!existsSync(abs)) {
+    throw new Error(
+      `Agent backend not found at ${abs}. Run the app from the monorepo with backend/ present, or set WORKSIGNAL_ROOT.`,
+    );
+  }
   return import(/* webpackIgnore: true */ pathToFileURL(abs).href) as Promise<T>;
 }
