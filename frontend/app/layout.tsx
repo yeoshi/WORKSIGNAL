@@ -28,6 +28,8 @@ export const metadata: Metadata = {
     'AI-powered multi-agent job search platform for early-career Singaporeans',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: {
