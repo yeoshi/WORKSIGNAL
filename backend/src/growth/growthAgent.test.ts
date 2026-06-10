@@ -17,6 +17,8 @@ import {
   GrowthAgentImpl,
   SKILL_GAPS_TABLE,
   buildGrowthQuery,
+  succinctWords,
+  toRoadmapWeekInput,
   type GrowthExaResult,
   type GrowthExaSearchFn,
   type SkillGapRecord,
@@ -158,6 +160,25 @@ describe('GrowthAgentImpl.onSkillGapFlagged', () => {
 /* ------------------------------------------------------------------ *
  * buildRoadmap — Exa research + roadmap storage (Req 19.2-19.4)
  * ------------------------------------------------------------------ */
+
+describe('succinctWords and toRoadmapWeekInput', () => {
+  it('limits roadmap titles to five words', () => {
+    expect(
+      succinctWords('Job Description Basics | Human Resources | Online Course', 5),
+    ).toBe('Job Description Basics');
+    const week = toRoadmapWeekInput('Kubernetes', 'course', {
+      title: 'Complete Kubernetes Fundamentals for Platform Engineers Online Course',
+      url: 'https://example.com/course',
+    });
+    expect(week.action.split(/\s+/).length).toBeLessThanOrEqual(5);
+  });
+
+  it('shortens verbose skill labels when building roadmaps', () => {
+    expect(
+      succinctWords('Healthcare domain experience not evidence in profile etc', 5),
+    ).toBe('Healthcare domain experience not evidence…');
+  });
+});
 
 describe('GrowthAgentImpl.buildRoadmap', () => {
   it('searches Exa per category including a Singapore-scoped event query (Req 19.2)', async () => {

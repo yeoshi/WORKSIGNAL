@@ -38,6 +38,7 @@
 import {
   DynamoDBWrapper,
   createLogger,
+  extractLinkedInRoleLine,
   type Application,
   type Logger,
   type NetworkAgent,
@@ -207,16 +208,75 @@ export function buildEventQuery(company: string): string {
   return scopeQuery(`${company} industry networking events meetups`);
 }
 
-/** Resolve a usable display name from an untrusted Exa result. */
-function resolveName(result: RawNetworkResult): string {
-  const name = (result.name ?? result.title ?? '').trim();
-  return name.length > 0 ? name : 'Unknown contact';
+/** Normalize a LinkedIn profile URL from an Exa result URL, when present. */
+export function extractLinkedInProfileUrl(url?: string): string | undefined {
+  if (!url?.trim()) return undefined;
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.replace(/^www\./, '');
+    if (host !== 'linkedin.com' && !host.endsWith('.linkedin.com')) {
+      return undefined;
+    }
+    const path = parsed.pathname.replace(/\/$/, '');
+    if (!/\/in\/[^/]+/i.test(path) && !/\/pub\/[^/]+/i.test(path)) {
+      return undefined;
+    }
+    return `https://www.linkedin.com${path}`;
+  } catch {
+    return undefined;
+  }
 }
 
-/** Resolve a usable context blurb from an untrusted Exa result. */
-function resolveContext(result: RawNetworkResult): string {
+function splitTitleSegments(title: string): string[] {
+  if (!title.trim()) return [];
+  const pipeParts = title.split(/\s*[|｜]\s*/).filter(Boolean);
+  if (pipeParts.length > 1) return pipeParts;
+  const dashParts = title.split(/\s+[-–—]\s+/).filter(Boolean);
+  if (dashParts.length > 1 && dashParts[0]!.length <= 60) return dashParts;
+  return [title.trim()];
+}
+
+/**
+ * Map an untrusted Exa people-search result to display name, role context,
+ * and an optional LinkedIn profile URL.
+ */
+export function parseExaContactFields(result: RawNetworkResult): {
+  name: string;
+  context: string;
+  linkedin_url?: string;
+} {
+  const title = (result.name ?? result.title ?? '').trim();
   const text = (result.text ?? '').trim();
-  return text.length > 0 ? text : 'No additional context available.';
+  const linkedin_url = extractLinkedInProfileUrl(result.url);
+
+  const segments = splitTitleSegments(title);
+  let name = segments[0]?.trim() ?? '';
+  const roleFromTitle =
+    segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
+
+  if (!name) name = 'Unknown contact';
+  if (name.length > 80) name = `${name.slice(0, 77)}…`;
+
+  const roleLine =
+    extractLinkedInRoleLine({ text, title }, name) ??
+    (roleFromTitle.length > 0 ? roleFromTitle : null);
+
+  let context: string;
+  if (roleLine) {
+    context = roleLine;
+  } else if (linkedin_url) {
+    context = 'LinkedIn profile';
+  } else {
+    context = 'No additional context available.';
+  }
+
+  return linkedin_url ? { name, context, linkedin_url } : { name, context };
+}
+
+/** Resolve a display name from an untrusted Exa event result. */
+function resolveEventName(result: RawNetworkResult): string {
+  const name = (result.name ?? result.title ?? '').trim();
+  return name.length > 0 ? name : 'Networking event';
 }
 
 /**
@@ -348,14 +408,19 @@ export class NetworkAgentImpl implements NetworkAgent {
     const candidates: NetworkSuggestion[] = [];
     for (const { tier, raws } of tierResults) {
       for (const raw of raws) {
-        const name = resolveName(raw);
-        const context = resolveContext(raw);
+        const { name, context, linkedin_url } = parseExaContactFields(raw);
         const outreach_draft = await this.draftOutreach(
           { name, type: tier, context },
           company,
           { name: drafterName },
         );
-        candidates.push({ name, type: tier, context, outreach_draft });
+        candidates.push({
+          name,
+          type: tier,
+          context,
+          outreach_draft,
+          ...(linkedin_url ? { linkedin_url } : {}),
+        });
       }
     }
 
@@ -428,7 +493,7 @@ export class NetworkAgentImpl implements NetworkAgent {
   private async searchEvents(company: string): Promise<NetworkingOpportunity[]> {
     const raws = await this.search(buildEventQuery(company));
     return raws.map((raw) => ({
-      name: resolveName(raw),
+      name: resolveEventName(raw),
       date: (raw.date ?? raw.publishedDate ?? '').trim(),
       url: (raw.url ?? '').trim(),
       type: 'event' as const,

@@ -21,6 +21,7 @@ import {
   saveArchivedSkills,
   saveProgressBySkill,
 } from '../lib/growthStorage';
+import { formatGrowthTitle } from '../lib/format';
 
 export { isSkillResolved };
 
@@ -42,6 +43,9 @@ const ARCHIVE_DELAY_MS = 2500;
 
 export interface GrowthViewProps {
   onTitleActionChange?: (action: ReactNode | null) => void;
+  /** Roadmaps from a completed Growth Agent run — merged without reload. */
+  mergeRunData?: GrowthRoadmap[] | null;
+  runError?: string | null;
 }
 
 function isActiveSkill(
@@ -64,7 +68,11 @@ function firstActiveSkill(
   return data.find((r) => isActiveSkill(r, archived, progressBySkill))?.skill ?? '';
 }
 
-export function GrowthView({ onTitleActionChange }: GrowthViewProps = {}) {
+export function GrowthView({
+  onTitleActionChange,
+  mergeRunData,
+  runError,
+}: GrowthViewProps = {}) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [selectedSkill, setSelectedSkill] = useState('');
   const [progressBySkill, setProgressBySkill] = useState(loadProgressBySkill);
@@ -88,6 +96,14 @@ export function GrowthView({ onTitleActionChange }: GrowthViewProps = {}) {
   useEffect(() => {
     saveProgressBySkill(progressBySkill);
   }, [progressBySkill]);
+
+  useEffect(() => {
+    if (!mergeRunData || mergeRunData.length === 0) return;
+    const archived = loadArchivedSkills();
+    const progress = loadProgressBySkill();
+    setState({ status: 'ready', data: mergeRunData });
+    setSelectedSkill(firstActiveSkill(mergeRunData, archived, progress));
+  }, [mergeRunData]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -241,15 +257,25 @@ export function GrowthView({ onTitleActionChange }: GrowthViewProps = {}) {
 
   if (state.status === 'empty') {
     return (
-      <div
-        data-testid="growth-empty"
-        className="flex flex-col items-center gap-2 rounded-card border border-dashed border-ws-line bg-ws-paper p-10 text-center"
-      >
-        <h2 className="text-xl font-semibold text-ws-ink">No roadmap yet</h2>
-        <p className="max-w-md text-sm text-ws-muted">
-          Once the same skill gap is flagged across several jobs, Work Signal
-          will build a four-week growth roadmap for you.
-        </p>
+      <div className="flex flex-col gap-4">
+        {runError ? (
+          <div
+            data-testid="growth-run-error-banner"
+            className="rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          >
+            {runError}
+          </div>
+        ) : null}
+        <div
+          data-testid="growth-empty"
+          className="flex flex-col items-center gap-2 rounded-card border border-dashed border-ws-line bg-ws-paper p-10 text-center"
+        >
+          <h2 className="text-xl font-semibold text-ws-ink">No roadmap yet</h2>
+          <p className="max-w-md text-sm text-ws-muted">
+            Run the Growth Agent to build a four-week roadmap from Realism skill
+            gaps flagged across your debated jobs.
+          </p>
+        </div>
       </div>
     );
   }
@@ -287,13 +313,24 @@ export function GrowthView({ onTitleActionChange }: GrowthViewProps = {}) {
 
   return (
     <>
+      {runError ? (
+        <div
+          data-testid="growth-run-error-banner"
+          className="mb-4 rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          {runError}
+        </div>
+      ) : null}
       {celebratingSkill && <RoadmapCelebration skill={celebratingSkill} />}
 
       {activeTabs.length > 0 && (
         <PillTabs
           data-testid="growth-skill-tabs"
           className="mb-6"
-          options={activeTabs.map((skill) => ({ id: skill, label: skill }))}
+          options={activeTabs.map((skill) => ({
+            id: skill,
+            label: formatGrowthTitle(skill),
+          }))}
           value={activeRoadmap.skill}
           onChange={setSelectedSkill}
         />

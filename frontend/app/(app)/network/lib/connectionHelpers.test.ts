@@ -19,7 +19,10 @@ describe('connectionHelpers', () => {
     expect(getInitials('Marcus')).toBe('M');
   });
 
-  it('formats role line before middle dot', () => {
+  it('formats a short LinkedIn-style role line', () => {
+    expect(formatRoleLine('Software Engineer at Google', 'Jane Doe')).toBe(
+      'Software Engineer @ Google',
+    );
     expect(formatRoleLine(base.context)).toBe('Product Analyst, Grab');
   });
 

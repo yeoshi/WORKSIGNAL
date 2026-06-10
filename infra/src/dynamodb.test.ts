@@ -5,6 +5,7 @@ import {
   DYNAMODB_REGION,
   JobsTable,
   RecalibrationLogTable,
+  NetworkSuggestionsTable,
   SkillGapsTable,
   UsersTable,
   WORKSIGNAL_TABLES,
@@ -25,13 +26,14 @@ describe('DynamoDB table infrastructure', () => {
     expect(DYNAMODB_REGION).toBe(process.env.AWS_DEFAULT_REGION ?? 'us-west-2');
   });
 
-  it('defines exactly the six design tables', () => {
+  it('defines exactly the seven design tables', () => {
     expect(WORKSIGNAL_TABLES.map((t) => t.TableName)).toEqual([
       'Users',
       'Jobs',
       'AgentVerdicts',
       'Applications',
       'SkillGaps',
+      'NetworkSuggestions',
       'RecalibrationLog',
     ]);
   });

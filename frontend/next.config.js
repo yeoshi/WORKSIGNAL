@@ -7,16 +7,34 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   transpilePackages: ['@worksignal/shared', '@worksignal/backend'],
-  webpack: (config) => {
-    // Resolve .js imports to .ts counterparts for ESM-style TypeScript workspace packages.
+  webpack: (config, { isServer, webpack: Webpack }) => {
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,
       '.js': ['.ts', '.tsx', '.js', '.jsx'],
       '.mjs': ['.mts', '.mjs'],
       '.cjs': ['.cts', '.cjs'],
     };
+
+    if (!isServer) {
+      config.plugins.push(
+        new Webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+          resource.request = resource.request.replace(/^node:/, '');
+        }),
+      );
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: false,
+        'node:crypto': false,
+        buffer: false,
+        stream: false,
+        util: false,
+        path: false,
+        fs: false,
+      };
+    }
+
     return config;
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

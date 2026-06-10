@@ -34,6 +34,7 @@
 import {
   DynamoDBWrapper,
   createLogger,
+  succinctWords,
   type GrowthAgent,
   type Logger,
   type NetworkingOpportunity,
@@ -78,11 +79,13 @@ const CATEGORY_DEFAULTS: Record<
   RoadmapResourceType,
   { cost: string; time_hours: number; verb: string }
 > = {
-  course: { cost: 'Varies', time_hours: 5, verb: 'Complete the course' },
-  project: { cost: 'Free', time_hours: 8, verb: 'Build the project' },
-  certification: { cost: 'Varies', time_hours: 6, verb: 'Work towards the certification' },
-  event: { cost: 'Free', time_hours: 2, verb: 'Attend the event' },
+  course: { cost: 'Varies', time_hours: 5, verb: 'Take course' },
+  project: { cost: 'Free', time_hours: 8, verb: 'Build project' },
+  certification: { cost: 'Varies', time_hours: 6, verb: 'Get certified' },
+  event: { cost: 'Free', time_hours: 2, verb: 'Attend event' },
 };
+
+export { succinctWords };
 
 /* ------------------------------------------------------------------ *
  * Injectable Exa client surface
@@ -216,10 +219,12 @@ export function toRoadmapWeekInput(
   const defaults = CATEGORY_DEFAULTS[category];
   const title = result?.title?.trim();
   const url = result?.url?.trim();
+  const shortTitle = title ? succinctWords(title, 5) : '';
+  const rawAction = shortTitle
+    ? `${defaults.verb}: ${shortTitle}`
+    : `${defaults.verb}: ${succinctWords(skill, 5)}`;
   return {
-    action: title
-      ? `${defaults.verb}: ${title}`
-      : `${defaults.verb} for ${skill}`,
+    action: succinctWords(rawAction, 5),
     resource_url:
       url && url.length > 0
         ? url
@@ -238,7 +243,7 @@ export function toNetworkingOpportunity(
   fallbackDate: string,
 ): NetworkingOpportunity {
   return {
-    name: result.title?.trim() || 'Singapore networking event',
+    name: succinctWords(result.title?.trim() || 'Singapore networking event', 5),
     date: result.publishedDate?.trim() || fallbackDate,
     url: result.url?.trim() || '',
     type: 'event',
@@ -340,8 +345,9 @@ export class GrowthAgentImpl implements GrowthAgent {
    * skill, times flagged, and projected match improvement (Req 19.4).
    */
   async buildRoadmap(userId: string, skill: string): Promise<SkillGapRoadmap> {
-    const log = this.logger.child({ userId, skill });
-    const existing = await this.readRecord(userId, skill);
+    const label = succinctWords(skill.trim(), 5) || skill.trim();
+    const log = this.logger.child({ userId, skill: label });
+    const existing = await this.readRecord(userId, label);
     const nowIso = this.now().toISOString();
     const timesFlagged =
       existing?.times_flagged ??
@@ -351,12 +357,12 @@ export class GrowthAgentImpl implements GrowthAgent {
     const research = await Promise.all(
       ROADMAP_CATEGORIES.map(async (category) => ({
         category,
-        results: await this.searchCategory(skill, category, log),
+        results: await this.searchCategory(label, category, log),
       })),
     );
 
     const weeks: RoadmapWeekInput[] = research.map(({ category, results }) =>
-      toRoadmapWeekInput(skill, category, results[0]),
+      toRoadmapWeekInput(label, category, results[0]),
     );
 
     // Collect Singapore event results as networking opportunities (Req 19.2).
@@ -369,7 +375,7 @@ export class GrowthAgentImpl implements GrowthAgent {
     const roadmap = assembleRoadmap({
       weeks,
       projected_match_improvement: this.projectMatchImprovement(
-        skill,
+        label,
         timesFlagged,
       ),
       networking_opportunities,
@@ -383,7 +389,7 @@ export class GrowthAgentImpl implements GrowthAgent {
     // Persist keyed (user_id, skill) with skill + times flagged (Req 19.4).
     const record: SkillGapRecord = {
       user_id: userId,
-      skill,
+      skill: label,
       times_flagged: timesFlagged,
       first_flagged_at: existing?.first_flagged_at ?? nowIso,
       flagged_job_ids: existing?.flagged_job_ids ?? [],

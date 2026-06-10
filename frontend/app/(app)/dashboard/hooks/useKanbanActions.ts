@@ -108,10 +108,26 @@ export function useKanbanActions({
 
   const markSent = useCallback(
     async (jobId: string) => {
+      const item = findItem(jobId);
       try {
-        await fetch(`/api/jobs/${encodeURIComponent(jobId)}/mark-sent`, {
+        const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/mark-sent`, {
           method: 'POST',
         });
+        if (res.ok && item) {
+          const body = (await res.json().catch(() => null)) as {
+            application_id?: string;
+          } | null;
+          removeActionNeeded(jobId);
+          removePendingSend(jobId);
+          const app = buildSentApplication(item);
+          if (body?.application_id) {
+            app.application_id = body.application_id;
+          }
+          prependApplication(app);
+          reloadDashboard();
+          reloadPipeline();
+          return;
+        }
       } catch {
         // Tolerate missing backend in dev.
       }
@@ -119,7 +135,15 @@ export function useKanbanActions({
       reloadDashboard();
       reloadPipeline();
     },
-    [moveToSent, reloadDashboard, reloadPipeline],
+    [
+      findItem,
+      moveToSent,
+      removeActionNeeded,
+      removePendingSend,
+      prependApplication,
+      reloadDashboard,
+      reloadPipeline,
+    ],
   );
 
   return { send, skip, save, markSent };

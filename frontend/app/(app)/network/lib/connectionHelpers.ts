@@ -1,3 +1,4 @@
+import { formatLinkedInRoleLine } from './linkedInRoleLine';
 import type { NetworkConnectionType, NetworkSuggestion } from '@/app/types/shared';
 
 export type EnrichedNetworkSuggestion = NetworkSuggestion & {
@@ -25,10 +26,9 @@ export function getInitials(name: string): string {
   return `${parts[0]!.charAt(0)}${parts[parts.length - 1]!.charAt(0)}`.toUpperCase();
 }
 
-/** Role line — prefer the segment before a middle dot. */
-export function formatRoleLine(context: string): string {
-  const primary = context.split('·')[0]?.trim();
-  return primary || context.trim();
+/** Short LinkedIn-style headline for display under the contact name. */
+export function formatRoleLine(context: string, contactName = ''): string {
+  return formatLinkedInRoleLine(context, contactName);
 }
 
 /** One-sentence agent reasoning for why this person was suggested. */

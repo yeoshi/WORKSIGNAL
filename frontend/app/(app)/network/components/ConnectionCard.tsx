@@ -144,8 +144,19 @@ export function ConnectionCard({
                 {suggestion.name}
               </h3>
               <p data-testid="connection-context" className="text-xs text-gray-500">
-                {formatRoleLine(suggestion.context)}
+                {formatRoleLine(suggestion.context, suggestion.name)}
               </p>
+              {hasLinkedIn && (
+                <a
+                  href={suggestion.linkedin_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="linkedin-profile-link"
+                  className="mt-0.5 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  View LinkedIn profile
+                </a>
+              )}
             </div>
             <ConnectionTypeBadge type={suggestion.type} />
           </div>

@@ -350,6 +350,37 @@ export const SkillGapsTable: TableDefinition = {
 };
 
 /**
+ * Table: NetworkSuggestions — partition key `user_id`, sort key `company`.
+ * Persists Network_Agent run output per company (Req 20).
+ */
+export const NetworkSuggestionsTable: TableDefinition = {
+  TableName: 'NetworkSuggestions',
+  BillingMode: 'PAY_PER_REQUEST',
+  AttributeDefinitions: [
+    { AttributeName: 'user_id', AttributeType: 'S' },
+    { AttributeName: 'company', AttributeType: 'S' },
+  ],
+  KeySchema: [
+    { AttributeName: 'user_id', KeyType: 'HASH' },
+    { AttributeName: 'company', KeyType: 'RANGE' },
+  ],
+  documentedAttributes: [
+    { name: 'user_id', type: 'string' },
+    { name: 'company', type: 'string' },
+    { name: 'application_count', type: 'number' },
+    {
+      name: 'suggestions',
+      type: '{ name, type, context, outreach_draft, linkedin_url?, email?, reasoning? }[]',
+    },
+    {
+      name: 'upcoming_events',
+      type: '{ name, date, url, type }[]',
+    },
+    { name: 'updated_at', type: 'timestamp', isNew: true, requirement: '20.4' },
+  ],
+};
+
+/**
  * Table: RecalibrationLog — partition key `recalibration_id`; GSI on
  * `(user_id, week_of)`.
  * design.md → Data Models → RecalibrationLog. Requirement 21.
@@ -407,5 +438,6 @@ export const WORKSIGNAL_TABLES: readonly TableDefinition[] = [
   AgentVerdictsTable,
   ApplicationsTable,
   SkillGapsTable,
+  NetworkSuggestionsTable,
   RecalibrationLogTable,
 ];

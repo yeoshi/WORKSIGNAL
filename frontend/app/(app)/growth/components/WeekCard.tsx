@@ -10,7 +10,7 @@ import {
   Hammer,
 } from 'lucide-react';
 import type { RoadmapResourceType, RoadmapWeek } from '@/app/types/shared';
-import { formatWeekMetadataStrip } from '../lib/format';
+import { formatGrowthTitle, formatWeekMetadataStrip } from '../lib/format';
 
 const TYPE_ICON_CONFIG: Record<
   RoadmapResourceType,
@@ -48,8 +48,8 @@ export function WeekCard({
     TYPE_ICON_CONFIG[week.type] ?? TYPE_ICON_CONFIG.course;
 
   const displayTitle = customProject
-    ? `[Custom] ${customProject}`
-    : week.action;
+    ? formatGrowthTitle(`Custom ${customProject}`)
+    : formatGrowthTitle(week.action);
 
   function handleSaveCustom() {
     const trimmed = customDraft.trim();

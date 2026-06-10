@@ -18,6 +18,7 @@ import { getAwsRegion } from '../../lib/awsRegion';
 import { generateAndPersistJobMaterials, shouldGenerateJobMaterials } from '../../lib/jobMaterialsGeneration';
 import { serializeUserProfileFromRecord } from '../../lib/serializeUserProfile';
 import { DEMO_MODE } from '../../lib/demo';
+import { createSseResponse } from '../../lib/sse';
 
 const MCF_FETCH_TIMEOUT_MS = 45_000;
 
@@ -128,34 +129,9 @@ export async function GET(request: Request) {
         }
     }
 
-    const encoder = new TextEncoder();
-    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-    const writer = writable.getWriter();
-
-    const emit = async (event: AgentRunEvent) => {
-        try {
-            await writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        } catch {
-            // client disconnected — silently ignore
-        }
-    };
-
-    // Run pipeline in background; stream stays open until it completes.
-    runPipeline(user.userId, user.name ?? 'User', emit)
-        .catch(async (err) => {
-            const msg = err instanceof Error ? err.message : String(err);
-            await emit({ type: 'error', message: msg });
-        })
-        .finally(() => writer.close());
-
-    return new Response(readable, {
-        headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache, no-transform',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',
-        },
-    });
+    return createSseResponse<AgentRunEvent>((emit) =>
+        runPipeline(user.userId, user.name ?? 'User', emit),
+    );
 }
 
 // ── Pipeline ────────────────────────────────────────────────────────────────

@@ -1,9 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatGrowthTitle,
   summarizeWeekPreview,
   formatWeekMetadataStrip,
   formatDaysUntil,
 } from './format';
+
+describe('formatGrowthTitle', () => {
+  it('limits skill gap labels to five words', () => {
+    expect(
+      formatGrowthTitle('Healthcare domain experience not evidence in profile etc'),
+    ).toBe('Healthcare domain experience not evidence…');
+  });
+});
 
 describe('summarizeWeekPreview', () => {
   it('returns max 3 words without ellipsis', () => {

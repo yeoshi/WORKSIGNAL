@@ -20,6 +20,8 @@ import {
   NetworkAgentImpl,
   buildTierQuery,
   buildEventQuery,
+  extractLinkedInProfileUrl,
+  parseExaContactFields,
   scopeQuery,
   templateOutreachDraft,
   type RawNetworkResult,
@@ -122,6 +124,56 @@ function fakeExa(map: Array<{ match: string; results: RawNetworkResult[] }>) {
 /* ------------------------------------------------------------------ *
  * Pure helper tests
  * ------------------------------------------------------------------ */
+
+describe('parseExaContactFields', () => {
+  it('extracts LinkedIn URL and splits name from pipe-delimited title', () => {
+    const fields = parseExaContactFields({
+      title: 'LIM Yi Hao | School of Computing and Information Systems',
+      url: 'https://www.linkedin.com/in/lim-yi-hao?utm=1',
+    });
+    expect(fields.name).toBe('LIM Yi Hao');
+    expect(fields.context).toBe('School of Computing and Information Systems');
+    expect(fields.linkedin_url).toBe('https://www.linkedin.com/in/lim-yi-hao');
+  });
+
+  it('extracts a short role line from Exa text when available', () => {
+    const fields = parseExaContactFields({
+      title: 'Tong Jess Ning',
+      text: 'Product Manager at Google. Previously at Meta.',
+      url: 'https://linkedin.com/in/tong-jess-ning',
+    });
+    expect(fields.name).toBe('Tong Jess Ning');
+    expect(fields.context).toBe('Product Manager @ Google');
+    expect(fields.linkedin_url).toBe('https://www.linkedin.com/in/tong-jess-ning');
+  });
+
+  it('parses Software Engineer @ Google from LinkedIn scrape text', () => {
+    const fields = parseExaContactFields({
+      title: 'Brendon Lim',
+      text:
+        '# Brendon Lim Software Engineer @ Google Software Engineer at [Google] (https://www.linkedin.com/company/google) Singapore 500 connections',
+      url: 'https://linkedin.com/in/brendon-lim',
+    });
+    expect(fields.context).toBe('Software Engineer @ Google');
+  });
+
+  it('falls back to LinkedIn profile label when only URL is known', () => {
+    const fields = parseExaContactFields({
+      title: 'Brendon Lim',
+      url: 'https://sg.linkedin.com/in/brendon-lim/',
+    });
+    expect(fields.name).toBe('Brendon Lim');
+    expect(fields.context).toBe('LinkedIn profile');
+    expect(fields.linkedin_url).toBe('https://www.linkedin.com/in/brendon-lim');
+  });
+});
+
+describe('extractLinkedInProfileUrl', () => {
+  it('returns undefined for non-profile URLs', () => {
+    expect(extractLinkedInProfileUrl('https://google.com')).toBeUndefined();
+    expect(extractLinkedInProfileUrl('https://linkedin.com/company/google')).toBeUndefined();
+  });
+});
 
 describe('Network_Agent query helpers', () => {
   it('scopeQuery appends Singapore exactly once', () => {

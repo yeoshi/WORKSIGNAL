@@ -21,6 +21,7 @@ export function DecisionKanbanCard({
   onSend: _onSend,
   onSkip,
   onSave,
+  onMarkSent,
 }: DecisionKanbanCardProps) {
   const [busy, setBusy] = useState(false);
   const hasEmail = item.has_employer_email ?? false;
@@ -98,6 +99,15 @@ export function DecisionKanbanCard({
               className="rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
               Review
+            </button>
+            <button
+              type="button"
+              data-testid="decision-action-mark-sent"
+              disabled={busy}
+              onClick={() => run(() => onMarkSent(item.job_id))}
+              className="rounded-md border border-ws-line bg-ws-card px-2.5 py-1 text-[11px] font-semibold text-ws-ink hover:bg-ws-paper disabled:opacity-50"
+            >
+              Mark sent
             </button>
             <button
               type="button"

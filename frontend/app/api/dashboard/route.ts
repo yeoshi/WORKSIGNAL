@@ -6,6 +6,8 @@ import { DynamoDBWrapper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_DASHBOARD } from '../lib/demo';
 import { listUserApplications } from '../lib/listUserApplications';
+import { succinctWords } from '@worksignal/shared/succinctWords';
+import { filterUserSkillGaps } from '../lib/skillGapFilter';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -61,7 +63,7 @@ function buildNetworkSummary(
   }
 
   return [...counts.entries()]
-    .filter(([, count]) => count >= 2)
+    .filter(([, count]) => count >= 1)
     .map(([company, application_count]) => ({
       company,
       application_count,
@@ -104,7 +106,10 @@ export async function GET() {
       applications.map((app) => app.job_id).filter(Boolean),
     );
     const unappliedJobs = (jobs ?? []).filter(
-      (job) => job.job_id && !appliedJobIds.has(job.job_id as string),
+      (job) =>
+        job.job_id &&
+        !appliedJobIds.has(job.job_id as string) &&
+        job.user_decision !== 'sent',
     );
 
     const verdictChecks = await Promise.all(
@@ -159,13 +164,18 @@ export async function GET() {
       : null;
 
     const growthSummary = (skillGaps ?? [])
+      .filter(
+        (sg) =>
+          typeof sg.skill === 'string' &&
+          filterUserSkillGaps([String(sg.skill)]).length > 0,
+      )
       .sort(
         (a, b) =>
           ((b.times_flagged as number) ?? 0) - ((a.times_flagged as number) ?? 0),
       )
       .slice(0, 3)
       .map((sg) => ({
-        skill: sg.skill,
+        skill: succinctWords(String(sg.skill), 5) || String(sg.skill),
         projected_match_improvement:
           (sg.roadmap as Record<string, unknown> | undefined)
             ?.projected_match_improvement ?? null,

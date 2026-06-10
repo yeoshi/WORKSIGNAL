@@ -2,6 +2,15 @@
  * Small display helpers for the Growth Roadmap view.
  */
 
+import { succinctWords } from '@worksignal/shared/succinctWords';
+
+export { succinctWords };
+
+/** Growth tab / card title — max five words. */
+export function formatGrowthTitle(text: string, maxWords = 5): string {
+  return succinctWords(text, maxWords) || text.trim();
+}
+
 /**
  * Format a week's time commitment for display (Req 19.3 "time estimate").
  *

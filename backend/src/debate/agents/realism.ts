@@ -72,7 +72,9 @@ export function buildRealismPrompt(job: Job, user: UserConfig): string {
     formatJob(job),
     '',
     `This user's calibrated "apply" match threshold is ${threshold}% — use ${threshold}% (not the 80% default) as the bar for an apply verdict.`,
-    'Identify specific skill/experience gaps in key_gaps and any work-life-balance red flags in work_life_flags.',
+    'In key_gaps list ONLY skills or experience the user lacks vs the role requirements (tools, certifications, years in a discipline).',
+    'Do NOT put job-listing quality issues in key_gaps (empty JD, recruitment-agency postings, undisclosed employer, unclear industry) — mention those only in reasoning.',
+    'Identify work-life-balance red flags in work_life_flags.',
     'Evaluate this job for the user per your mandate and output contract.',
     STRICT_JSON_TRAILER,
   ].join('\n');

@@ -19,6 +19,7 @@ import {
   hasAnyCompletedCompany,
 } from '../../network/lib/networkStorage';
 import { formatWeekRange } from '../../../lib/formatDate';
+import { formatGrowthTitle } from '../../growth/lib/format';
 
 export interface InsightRailProps {
   growth: GrowthCardItem[];
@@ -142,7 +143,7 @@ function GrowthCard({
   const activeItems = getActiveGrowthItems(items);
   const headline = allComplete
     ? 'All caught up'
-    : (activeItems[0]?.skill ?? top?.skill ?? '');
+    : formatGrowthTitle(activeItems[0]?.skill ?? top?.skill ?? '');
   const showPulse = pulseArrow && hasAnyCompletedGrowthSkill(items) && !allComplete;
 
   return (

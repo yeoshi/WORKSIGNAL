@@ -9,3 +9,5 @@ export * from './logger.js';
 export * from './crypto.js';
 export * from './dynamodb.js';
 export * from './s3.js';
+export * from './linkedInRoleLine.js';
+export * from './succinctWords.js';

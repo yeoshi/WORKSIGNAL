@@ -13,7 +13,7 @@ import { DynamoDBWrapper } from '@worksignal/shared';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/authOptions';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
-import { randomUUID } from 'node:crypto';
+import { createSentApplication } from '../../lib/createSentApplication';
 
 interface SendBody {
     job_id: string;
@@ -120,41 +120,18 @@ export async function POST(request: Request) {
         console.log(`[apply/send] ✓ Email sent — messageId: ${gmailData.id ?? 'unknown'} → ${employerEmail}`);
 
         // ── Persist Application record ───────────────────────────────────────
-        // Look up verdict_id if available (best-effort — don't fail the send).
-        let verdictId: string | null = null;
+        let applicationId = '';
         try {
-            const verdicts = await db.query('AgentVerdicts', {
-                IndexName: 'job_id-user_id-index',
-                KeyConditionExpression: 'job_id = :j AND user_id = :u',
-                ExpressionAttributeValues: { ':j': job_id, ':u': user.userId },
-                Limit: 1,
+            const created = await createSentApplication({
+                db,
+                userId: user.userId,
+                jobId: job_id,
+                job: job as Record<string, unknown>,
+                coverLetterText: cover_letter,
+                recipientEmail: employerEmail,
+                emailThreadId: gmailData.threadId ?? null,
             });
-            verdictId = (verdicts[0] as { verdict_id?: string } | undefined)?.verdict_id ?? null;
-        } catch { /* non-critical */ }
-
-        const now = new Date().toISOString();
-        const applicationId = randomUUID();
-
-        try {
-            await db.put('Applications', {
-                application_id: applicationId,
-                user_id: user.userId,
-                job_id,
-                verdict_id: verdictId ?? `manual-${applicationId}`,
-                company: job.company,
-                role_title: job.role_title,
-                customised_resume_s3_key: '',
-                customisation_applied: false,
-                cover_letter_text: cover_letter,
-                sent_at: now,
-                recipient_email: employerEmail,
-                email_thread_id: gmailData.threadId ?? null,
-                status: 'sent',
-                redirect_source_url: null,
-                redirected_at: null,
-                status_updated_at: now,
-                classification_confidence: 0,
-            });
+            applicationId = created.application_id;
             console.log(`[apply/send] ✓ Application record created — application_id: ${applicationId}`);
         } catch (dbErr) {
             console.warn('[apply/send] Failed to persist Application record:', dbErr);

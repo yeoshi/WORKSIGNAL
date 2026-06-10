@@ -7,7 +7,7 @@ import { NetworkCompanyTabs } from './NetworkCompanyTabs';
 import { NetworkCompanyCompletion } from './NetworkCompanyCompletion';
 import { NetworkCelebration } from './NetworkCelebration';
 import { ArchivedConnectionsPanel } from './ArchivedConnectionsPanel';
-import { fetchNetworkOnce, type NetworkData } from '../lib/fetchNetwork';
+import { fetchNetworkOnce, normalizeNetworkResponse, type NetworkData } from '../lib/fetchNetwork';
 import { fireCelebrationConfetti } from '../../../lib/confetti';
 import type { NetworkCardItem } from '../../dashboard/types';
 import {
@@ -34,11 +34,22 @@ type ViewMode = 'active' | 'archived';
 
 const ARCHIVE_DELAY_MS = 2500;
 
+export interface NetworkRunCompanyPayload {
+  company: string;
+  application_count: number;
+  suggestions: NetworkData['suggestionSet']['suggestions'];
+  upcoming_events: NetworkData['suggestionSet']['upcoming_events'];
+}
+
 export interface NetworkViewProps {
   /** Company items for the horizontal pill switcher (from dashboard). */
   companyItems?: NetworkCardItem[];
   onViewPipeline?: (company: string) => void;
   onTitleActionChange?: (action: ReactNode | null) => void;
+  /** Companies from a completed Network Agent run — merged without reload. */
+  mergeRunCompanies?: NetworkRunCompanyPayload[] | null;
+  runCompletedEmpty?: boolean;
+  runError?: string | null;
 }
 
 function isCompanyActive(
@@ -63,6 +74,9 @@ export function NetworkView({
   companyItems = [],
   onViewPipeline,
   onTitleActionChange,
+  mergeRunCompanies,
+  runCompletedEmpty = false,
+  runError,
 }: NetworkViewProps) {
   const [companyStates, setCompanyStates] = useState<Record<string, CompanyLoadState>>({});
   const companyStatesRef = useRef(companyStates);
@@ -109,6 +123,30 @@ export function NetworkView({
     viewMode === 'active' && activeCompany
       ? companyStates[activeCompany]
       : undefined;
+
+  useEffect(() => {
+    if (!mergeRunCompanies || mergeRunCompanies.length === 0) return;
+
+    setCompanyStates((prev) => {
+      const next = { ...prev };
+      for (const row of mergeRunCompanies) {
+        const normalized = normalizeNetworkResponse({
+          company: row.company,
+          application_count: row.application_count,
+          suggestions: row.suggestions,
+          upcoming_events: row.upcoming_events,
+        });
+        if (normalized) {
+          next[row.company] = { status: 'ready', data: normalized };
+        }
+      }
+      return next;
+    });
+
+    if (!selectedCompany && mergeRunCompanies[0]) {
+      setSelectedCompany(mergeRunCompanies[0].company);
+    }
+  }, [mergeRunCompanies, selectedCompany]);
 
   useEffect(() => {
     return () => {
@@ -471,9 +509,34 @@ export function NetworkView({
 
   if (!activeCompany && allTabs.length === 0) {
     return (
-      <div data-testid="network-loading" className="flex flex-col gap-4" aria-busy="true">
-        <div className="h-20 w-full animate-pulse rounded bg-ws-line/60" />
-        <div className="h-44 w-full animate-pulse rounded bg-ws-line/40" />
+      <div className="flex flex-col gap-4">
+        {runError ? (
+          <div
+            data-testid="network-run-error-banner"
+            className="rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          >
+            {runError}
+          </div>
+        ) : null}
+        {runCompletedEmpty ? (
+          <div
+            data-testid="network-run-empty-banner"
+            className="rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            No sent applications yet — mark jobs as sent from the pipeline first,
+            then run the Network Agent again.
+          </div>
+        ) : null}
+        <div
+          data-testid="network-empty"
+          className="flex flex-col items-center gap-2 rounded-card border border-dashed border-ws-line bg-ws-paper p-10 text-center"
+        >
+          <h2 className="text-xl font-semibold text-ws-ink">No companies yet</h2>
+          <p className="max-w-md text-sm text-ws-muted">
+            Mark jobs as sent from Needs Decision or Pending Send, then run the
+            Network Agent to surface connection suggestions.
+          </p>
+        </div>
       </div>
     );
   }
@@ -493,6 +556,14 @@ export function NetworkView({
   if (activeState.status === 'empty') {
     return (
       <div className="flex flex-col gap-4">
+        {runError ? (
+          <div
+            data-testid="network-run-error-banner"
+            className="rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          >
+            {runError}
+          </div>
+        ) : null}
         {renderActiveTabs()}
         <div
           data-testid="network-empty"
@@ -500,8 +571,8 @@ export function NetworkView({
         >
           <h2 className="text-xl font-semibold text-ws-ink">No network suggestions yet</h2>
           <p className="max-w-md text-sm text-ws-muted">
-            Once you&apos;ve sent at least two applications to the same company,
-            Work Signal will surface connection suggestions.
+            Run the Network Agent to research connections and draft outreach for
+            your target companies.
           </p>
         </div>
       </div>
@@ -526,6 +597,14 @@ export function NetworkView({
 
   return (
     <div className="flex flex-col gap-4">
+      {runError ? (
+        <div
+          data-testid="network-run-error-banner"
+          className="rounded-card border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+        >
+          {runError}
+        </div>
+      ) : null}
       {celebratingCompany && (
         <NetworkCelebration company={celebratingCompany} />
       )}

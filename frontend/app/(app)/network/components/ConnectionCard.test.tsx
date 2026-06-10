@@ -17,7 +17,7 @@ describe('ConnectionCard', () => {
     render(<ConnectionCard suggestion={mockSuggestion} company="Grab" />);
     expect(screen.getByTestId('connection-name')).toHaveTextContent('Jane Doe');
     expect(screen.getByTestId('connection-context')).toHaveTextContent(
-      'Senior Engineer at Google, NUS CS 2019',
+      'Senior Engineer @ Google',
     );
   });
 
@@ -64,6 +64,10 @@ describe('ConnectionCard', () => {
       />,
     );
     expect(screen.getByTestId('linkedin-action')).toHaveAttribute(
+      'href',
+      'https://linkedin.com/in/jane',
+    );
+    expect(screen.getByTestId('linkedin-profile-link')).toHaveAttribute(
       'href',
       'https://linkedin.com/in/jane',
     );

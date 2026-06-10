@@ -9,6 +9,8 @@
 import { DynamoDBWrapper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_GROWTH } from '../lib/demo';
+import { succinctWords } from '@worksignal/shared/succinctWords';
+import { filterUserSkillGaps } from '../lib/skillGapFilter';
 
 export async function GET() {
     if (DEMO_MODE) return Response.json({ skills: DEMO_GROWTH.skills });
@@ -31,19 +33,23 @@ export async function GET() {
 
         // Return the most recently created roadmap that has a roadmap built.
         const withRoadmap = items.filter(
-            (item) => item.roadmap && item.status === 'roadmap_created',
+            (item) =>
+                item.roadmap &&
+                item.status === 'roadmap_created' &&
+                typeof item.skill === 'string' &&
+                filterUserSkillGaps([item.skill]).length > 0,
         );
 
         if (withRoadmap.length === 0) {
             return new Response(null, { status: 204 });
         }
 
-        // Return the first roadmap found (most relevant skill gap).
-        const entry = withRoadmap[0]!;
         return Response.json({
-            skill: entry.skill,
-            times_flagged: entry.times_flagged,
-            roadmap: entry.roadmap,
+            skills: withRoadmap.map((entry) => ({
+                skill: succinctWords(String(entry.skill), 5) || String(entry.skill),
+                times_flagged: entry.times_flagged,
+                roadmap: entry.roadmap,
+            })),
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';

@@ -1,3 +1,5 @@
+import { formatGrowthTitle } from '../lib/format';
+
 export interface RoadmapCelebrationProps {
   skill: string;
 }
@@ -18,7 +20,8 @@ export function RoadmapCelebration({ skill }: RoadmapCelebrationProps) {
           Nice job! Let&apos;s get you more callbacks!
         </h2>
         <p className="mt-2 text-sm text-gray-500">
-          Archiving <span className="font-medium text-gray-700">{skill}</span>…
+          Archiving{' '}
+          <span className="font-medium text-gray-700">{formatGrowthTitle(skill)}</span>…
         </p>
       </div>
     </div>

@@ -47,6 +47,9 @@ export interface NetworkSuggestion {
   context: string;
   /** Personalised outreach draft (Req 20.4). */
   outreach_draft: string;
+  /** LinkedIn profile URL when discovered from Exa search. */
+  linkedin_url?: string;
+  email?: string;
 }
 
 /**

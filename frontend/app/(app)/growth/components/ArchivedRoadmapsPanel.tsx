@@ -1,4 +1,5 @@
 import { Archive, CheckCircle2 } from 'lucide-react';
+import { formatGrowthTitle } from '../lib/format';
 
 export interface ArchivedRoadmapsPanelProps {
   skills: string[];
@@ -33,7 +34,9 @@ export function ArchivedRoadmapsPanel({ skills }: ArchivedRoadmapsPanelProps) {
             className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3"
           >
             <CheckCircle2 size={18} className="shrink-0 text-emerald-500" aria-hidden />
-            <span className="text-sm font-medium text-gray-600">{skill}</span>
+            <span className="text-sm font-medium text-gray-600">
+              {formatGrowthTitle(skill)}
+            </span>
           </li>
         ))}
       </ul>
