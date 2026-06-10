@@ -87,7 +87,20 @@ async function runPipeline(
 
     // Lazy imports — AWS SDK needs env vars set before use.
     const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, resolveDegraded, isInvalidVerdict } = await import('@worksignal/backend');
+    const {
+        createOpportunityScanner,
+        preFilter,
+        runAmbitionAgent,
+        runRealismAgent,
+        runRiskAgent,
+        runOpportunityAgent,
+        persistAgentVerdicts,
+        resolveDegraded,
+        isInvalidVerdict,
+        applyRealismFloor,
+    } = await import('@worksignal/backend');
+    const { generateAndPersistJobMaterials, shouldGenerateJobMaterials } = await import('../../lib/jobMaterialsGeneration');
+    const { serializeUserProfileFromRecord } = await import('../../lib/serializeUserProfile');
 
     const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
     const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
@@ -281,7 +294,10 @@ async function runPipeline(
 
         // ── Resolve master decision + update same record ────────────────────
         const degResult = resolveDegraded(persistResult.verdicts);
-        const decision = degResult.resolved ? degResult.decision : null;
+        const rawDecision = degResult.resolved ? degResult.decision : null;
+        const decision = rawDecision
+            ? applyRealismFloor(rawDecision, persistResult.verdicts.realism)
+            : null;
         const dec = decision?.decision ?? 'no_decision';
 
         if (decision) {
@@ -297,6 +313,28 @@ async function runPipeline(
                 },
             );
             console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
+
+            if (shouldGenerateJobMaterials(dec)) {
+                console.log(`[AgentRun] ⏳ Generating application materials for ${job.job_id}`);
+                await emit({ type: 'materials_start', job_id: job.job_id, title: job.role_title });
+                try {
+                    const userProfile = serializeUserProfileFromRecord(rawUser as Record<string, unknown>);
+                    await generateAndPersistJobMaterials({
+                        userId,
+                        jobId: job.job_id,
+                        verdictId: persistResult.verdict_id,
+                        job: job as unknown as Record<string, unknown>,
+                        decision: decision as unknown as Record<string, unknown>,
+                        userProfile,
+                    });
+                    console.log(`[AgentRun] ✓ Application materials saved for ${job.job_id}`);
+                    await emit({ type: 'materials_complete', job_id: job.job_id, title: job.role_title });
+                } catch (materialsError) {
+                    const msg = materialsError instanceof Error ? materialsError.message : 'Materials generation failed';
+                    console.warn(`[AgentRun] ⚠ Materials generation failed for ${job.job_id}:`, msg);
+                    await emit({ type: 'materials_failed', job_id: job.job_id, title: job.role_title, message: msg });
+                }
+            }
         } else {
             console.log(`[AgentRun] ⚠ No master decision (degraded — no valid verdicts for ${job.job_id})`);
         }

@@ -302,8 +302,9 @@ export class OnboardingServiceImpl implements OnboardingPersistenceApi {
     userId: string,
     nn: NonNegotiables,
   ): Promise<void | ValidationError> {
+    let normalized: NonNegotiables;
     try {
-      validateMinSalary(nn.min_salary);
+      normalized = { ...nn, min_salary: Math.round(validateMinSalary(nn.min_salary)) };
     } catch (error) {
       if (error instanceof ValidationError) {
         // Nothing is persisted on rejection (Req 5.3).
@@ -319,8 +320,8 @@ export class OnboardingServiceImpl implements OnboardingPersistenceApi {
     const industries = record.profile?.target_industries ?? [];
     record.non_negotiables =
       residency === undefined
-        ? nn
-        : applyEpSalaryFloor(nn, residency, industries);
+        ? normalized
+        : applyEpSalaryFloor(normalized, residency, industries);
 
     await this.commit(record);
   }
@@ -396,8 +397,10 @@ export class OnboardingServiceImpl implements OnboardingPersistenceApi {
 
     // Non-negotiables (re-validate minimum salary — Req 5.3).
     if (patch.non_negotiables !== undefined) {
-      validateMinSalary(patch.non_negotiables.min_salary);
-      record.non_negotiables = patch.non_negotiables;
+      record.non_negotiables = {
+        ...patch.non_negotiables,
+        min_salary: Math.round(validateMinSalary(patch.non_negotiables.min_salary)),
+      };
     }
 
     return this.commit(record);

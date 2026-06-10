@@ -11,18 +11,24 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^4.0.114",
+    "@ai-sdk/gateway": "^3.0.127",
+    "@ai-sdk/react": "^3.0.201",
     "@hello-pangea/dnd": "^18.0.1",
     "@worksignal/backend": "*",
     "@worksignal/shared": "*",
+    "ai": "^6.0.199",
     "canvas-confetti": "^1.9.4",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
     "next": "14.2.5",
     "next-auth": "^4.24.14",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

@@ -107,6 +107,16 @@ export default function ProfilePage() {
   async function handleSaveAll() {
     setSaving(true);
 
+    // Save targets (including min salary) first so a failure in another tab
+    // cannot block persisting the value the user just edited.
+    const targetsResult = await targetsRef.current?.validateAndSave();
+    if (!targetsResult?.ok) {
+      setActiveTab('targets');
+      showSnackbar(targetsResult?.message ?? 'Could not save Targets.', 'error');
+      setSaving(false);
+      return;
+    }
+
     const aboutResult = await aboutRef.current?.validateAndSave();
     if (!aboutResult?.ok) {
       setActiveTab('about');
@@ -126,16 +136,33 @@ export default function ProfilePage() {
       return;
     }
 
-    const targetsResult = await targetsRef.current?.validateAndSave();
-    if (!targetsResult?.ok) {
-      setActiveTab('targets');
-      showSnackbar(targetsResult?.message ?? 'Could not save Targets.', 'error');
-      setSaving(false);
-      return;
+    const next = await fetchOnboardingState();
+    if (next) {
+      setRecord(next);
+      if (next.residency_status) {
+        setLiveResidency(next.residency_status);
+      }
     }
 
-    await reload();
-    showSnackbar('Profile saved', 'success');
+    const savedSalary = next?.non_negotiables?.min_salary;
+    if (typeof savedSalary === 'number' && targetsResult.savedMinSalary != null) {
+      if (savedSalary !== targetsResult.savedMinSalary) {
+        setActiveTab('targets');
+        showSnackbar(
+          `Minimum salary did not stick (saved as $${savedSalary}). Try again.`,
+          'error',
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    showSnackbar(
+      typeof savedSalary === 'number'
+        ? `Profile saved (min salary $${savedSalary.toLocaleString()})`
+        : 'Profile saved',
+      'success',
+    );
     setSaving(false);
   }
 
@@ -189,6 +216,7 @@ export default function ProfilePage() {
 
         <div className={activeTab === 'targets' ? undefined : 'hidden'}>
           <TargetsStep
+            key={`targets-${record.updated_at ?? ''}-${record.non_negotiables?.min_salary ?? ''}`}
             ref={targetsRef}
             embedded
             hideFooter

@@ -105,5 +105,33 @@ function createLocalOnboardingService() {
       putLocalUser(userId, { non_negotiables: nn });
       return undefined;
     },
+    async editOnboarding(userId: string, patch: Record<string, unknown>) {
+      const existing = getLocalUser(userId);
+      const profile = {
+        ...(existing?.profile ?? {}),
+        ...(Array.isArray(patch.target_roles)
+          ? { target_roles: patch.target_roles }
+          : {}),
+        ...(Array.isArray(patch.target_industries)
+          ? { target_industries: patch.target_industries }
+          : {}),
+        ...(Array.isArray(patch.dream_companies)
+          ? { dream_companies: patch.dream_companies }
+          : {}),
+        ...(Array.isArray(patch.priority_ranking)
+          ? { priority_ranking: patch.priority_ranking }
+          : {}),
+      };
+      putLocalUser(userId, {
+        profile,
+        ...(patch.non_negotiables
+          ? { non_negotiables: patch.non_negotiables }
+          : {}),
+      });
+      return {
+        ...patch,
+        non_negotiables: patch.non_negotiables ?? existing?.non_negotiables,
+      };
+    },
   };
 }

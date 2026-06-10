@@ -22,6 +22,13 @@ export function normalizeJobDetail(body: unknown): JobDetailData | null {
       ? body.materials.cover_letter_text
       : '');
 
+  const tailoringNotes =
+    typeof body.tailoringNotes === 'string'
+      ? body.tailoringNotes
+      : typeof body.tailoring_notes === 'string'
+        ? body.tailoring_notes
+        : '';
+
   const materials =
     isRecord(body.materials) && typeof body.materials.resume_s3_key === 'string'
       ? body.materials
@@ -39,5 +46,6 @@ export function normalizeJobDetail(body: unknown): JobDetailData | null {
     decision: decision as JobDetailData['decision'],
     materials: materials as JobDetailData['materials'],
     coverLetter,
+    tailoringNotes,
   };
 }

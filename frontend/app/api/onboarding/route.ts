@@ -4,14 +4,20 @@
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
+import { DEMO_MODE, DEMO_USER } from '../lib/demo';
 import { createOnboardingServiceForRequest, loadOnboardingUser } from '../lib/onboardingPersistence';
+import { seedDemoOnboardingUser } from '../lib/demoOnboardingSeed';
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return unauthorizedResponse();
 
   try {
-    const record = await loadOnboardingUser(user.userId);
+    let record = await loadOnboardingUser(user.userId);
+
+    if (!record && DEMO_MODE && user.userId === DEMO_USER.userId) {
+      record = seedDemoOnboardingUser(user.userId) as Record<string, unknown>;
+    }
 
     if (!record) {
       return new Response(null, { status: 204 });

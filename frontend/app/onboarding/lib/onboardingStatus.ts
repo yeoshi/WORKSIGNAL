@@ -29,6 +29,7 @@ export type OnboardingRecord = {
   dream_companies?: string[];
   priority_ranking?: PriorityFactor[];
   non_negotiables?: NonNegotiables;
+  updated_at?: string;
 };
 
 export function isOnboardingComplete(

@@ -48,6 +48,13 @@ export const authOptions: NextAuthOptions = {
         return result.redirectUrl ?? true;
       } catch (error) {
         console.error('OAuth sign-in persistence failed:', error);
+        const message =
+          error instanceof Error ? error.message : 'Sign-in persistence failed';
+        if (/ExpiredToken|expired token/i.test(message)) {
+          throw new Error(
+            'AWS credentials in frontend/.env.local are expired. Refresh AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN, then restart the dev server.',
+          );
+        }
         return false;
       }
     },

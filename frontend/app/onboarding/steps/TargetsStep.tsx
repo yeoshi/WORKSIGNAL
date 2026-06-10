@@ -34,6 +34,11 @@ const EMPLOYMENT_TYPES: ReadonlyArray<{ value: EmploymentType; label: string }> 
   { value: 'part_time', label: 'Part-time' },
 ];
 
+/** Whole SGD/month — salary inputs are integers, not floats. */
+function parseMinSalary(raw: string): number {
+  return Math.round(Number(raw.trim()));
+}
+
 const WORK_ARRANGEMENTS: ReadonlyArray<{
   value: WorkArrangement;
   label: string;
@@ -105,7 +110,7 @@ export const TargetsStep = forwardRef<ProfileSectionHandle, TargetsStepProps>(
         dream_companies: dreamCompanies,
         priority_ranking: ranking,
         non_negotiables: {
-          min_salary: Number(minSalary.trim()),
+          min_salary: parseMinSalary(minSalary),
           employment_type: employmentTypes,
           work_arrangement: workArrangement,
           custom,
@@ -155,7 +160,18 @@ export const TargetsStep = forwardRef<ProfileSectionHandle, TargetsStepProps>(
         return { ok: false, message: result.message };
       }
 
-      return { ok: true };
+      const savedMinSalary = result.data?.min_salary;
+      const requestedMinSalary = payload.non_negotiables.min_salary;
+      if (
+        typeof savedMinSalary === 'number' &&
+        savedMinSalary !== requestedMinSalary
+      ) {
+        const message = `Minimum salary saved as $${savedMinSalary.toLocaleString()} instead of $${requestedMinSalary.toLocaleString()}.`;
+        setErrors((e) => ({ ...e, submit: message }));
+        return { ok: false, message };
+      }
+
+      return { ok: true, savedMinSalary: savedMinSalary ?? requestedMinSalary };
     }
 
     useImperativeHandle(ref, () => ({
@@ -239,10 +255,11 @@ export const TargetsStep = forwardRef<ProfileSectionHandle, TargetsStepProps>(
         >
           <TextInput
             id="min-salary"
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={minSalary}
             onChange={(v) => {
-              setMinSalary(v);
+              setMinSalary(v.replace(/[^\d]/g, ''));
               setErrors((e) => ({ ...e, salary: undefined }));
             }}
             placeholder="e.g. 5000"

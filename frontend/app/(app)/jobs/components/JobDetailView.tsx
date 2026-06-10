@@ -23,8 +23,20 @@ export interface JobDetailViewProps {
   onCoverLetterChange?: (value: string) => void;
   /** Called when the user clicks ↺ to regenerate the cover letter via Bedrock. */
   onRegenerate?: () => void;
-  /** True while the cover letter is being auto-drafted — shows a loading state. */
-  isDraftingCoverLetter?: boolean;
+  /** True while the cover letter is streaming — shows a loading state. */
+  coverLetterLoading?: boolean;
+  /** Streamed resume tailoring notes (Needs Decision modal only). */
+  tailoringNotes?: string;
+  /** True while tailoring notes are streaming. */
+  tailoringLoading?: boolean;
+  /** Shown when cover letter / tailoring generation fails. */
+  generationError?: string | null;
+  /** True while resume is streaming or being saved as PDF. */
+  resumeLoading?: boolean;
+  /** Shown when resume generation or PDF persistence fails. */
+  resumeGenerationError?: string | null;
+  /** Active resume S3 key override (customised resume). */
+  resumeS3Key?: string;
   /** Called after the user uploads a custom resume for this specific job. */
   onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
 }
@@ -41,7 +53,13 @@ export function JobDetailView({
   coverLetter: controlledCoverLetter,
   onCoverLetterChange,
   onRegenerate,
-  isDraftingCoverLetter = false,
+  coverLetterLoading = false,
+  tailoringNotes,
+  tailoringLoading = false,
+  generationError = null,
+  resumeLoading = false,
+  resumeGenerationError = null,
+  resumeS3Key,
   onCustomResumeUploaded,
 }: JobDetailViewProps) {
   const { job, verdicts, decision, materials } = data;
@@ -88,9 +106,15 @@ export function JobDetailView({
         onCoverLetterChange={setCoverLetter}
         originalCoverLetter={data.coverLetter}
         editable={showActions}
-        disabled={pendingAction !== null || isDraftingCoverLetter}
+        disabled={pendingAction !== null}
         onRegenerate={onRegenerate}
-        isDraftingCoverLetter={isDraftingCoverLetter}
+        coverLetterLoading={coverLetterLoading}
+        tailoringNotes={tailoringNotes}
+        tailoringLoading={tailoringLoading}
+        generationError={generationError}
+        resumeLoading={resumeLoading}
+        resumeGenerationError={resumeGenerationError}
+        resumeS3Key={resumeS3Key}
         onCustomResumeUploaded={onCustomResumeUploaded}
       />
       {showActions && !externalActionBar && (

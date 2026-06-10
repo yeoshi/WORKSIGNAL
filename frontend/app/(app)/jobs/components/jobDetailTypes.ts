@@ -12,6 +12,8 @@ export interface JobDetailData {
   materials: Materials;
   /** The cover-letter text to seed the editable field (Req 15.4). */
   coverLetter: string;
+  /** Pre-generated tailoring notes for the cover letter. */
+  tailoringNotes: string;
 }
 
 /** The action a user can trigger from the action bar (Req 15.5). */
