@@ -21,6 +21,12 @@ export interface JobDetailViewProps {
   /** Controlled cover letter (used with external action bar). */
   coverLetter?: string;
   onCoverLetterChange?: (value: string) => void;
+  /** Called when the user clicks ↺ to regenerate the cover letter via Bedrock. */
+  onRegenerate?: () => void;
+  /** True while the cover letter is being auto-drafted — shows a loading state. */
+  isDraftingCoverLetter?: boolean;
+  /** Called after the user uploads a custom resume for this specific job. */
+  onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
 }
 
 export function JobDetailView({
@@ -34,6 +40,9 @@ export function JobDetailView({
   externalActionBar = false,
   coverLetter: controlledCoverLetter,
   onCoverLetterChange,
+  onRegenerate,
+  isDraftingCoverLetter = false,
+  onCustomResumeUploaded,
 }: JobDetailViewProps) {
   const { job, verdicts, decision, materials } = data;
   const [internalCoverLetter, setInternalCoverLetter] = useState(data.coverLetter);
@@ -79,7 +88,10 @@ export function JobDetailView({
         onCoverLetterChange={setCoverLetter}
         originalCoverLetter={data.coverLetter}
         editable={showActions}
-        disabled={pendingAction !== null}
+        disabled={pendingAction !== null || isDraftingCoverLetter}
+        onRegenerate={onRegenerate}
+        isDraftingCoverLetter={isDraftingCoverLetter}
+        onCustomResumeUploaded={onCustomResumeUploaded}
       />
       {showActions && !externalActionBar && (
         <ActionBar

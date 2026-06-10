@@ -33,6 +33,8 @@ export interface PipelineKanbanProps {
   actionNeeded: ActionNeededItem[];
   isLoading?: boolean;
   onOpenJob: (jobId: string, opts: { showActions: boolean }) => void;
+  /** Opens the cover-letter draft modal for a job. */
+  onApply: (jobId: string) => void;
   onSend: (jobId: string) => Promise<void>;
   onSkip: (jobId: string) => Promise<void>;
   onSave: (jobId: string) => Promise<void>;
@@ -60,6 +62,7 @@ export function PipelineKanban({
   actionNeeded,
   isLoading = false,
   onOpenJob,
+  onApply,
   onSend,
   onSkip,
   onSave,
@@ -131,6 +134,7 @@ export function PipelineKanban({
                   onOpenJob={(jobId) =>
                     onOpenJob(jobId, { showActions: true })
                   }
+                  onApply={onApply}
                   onSend={onSend}
                   onSkip={onSkip}
                   onSave={onSave}

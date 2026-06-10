@@ -65,10 +65,10 @@ const { runAndPersistAgentVerdicts } = await import('../debate/verdictPersistenc
 const { resolveDegraded } = await import('../orchestrator/degradedResolution.js');
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const USER_ID  = '109848448123861557723';   // Rose's Google OAuth sub
-const REGION   = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
+const USER_ID = '109848448123861557723';   // Rose's Google OAuth sub
+const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
-const EXA_KEY  = process.env.EXA_API_KEY ?? '';
+const EXA_KEY = process.env.EXA_API_KEY ?? '';
 
 // ── Bedrock client ────────────────────────────────────────────────────────────
 const bedrockClient = new BedrockRuntimeClient({ region: REGION });
@@ -111,11 +111,11 @@ const exa: ExaClient = async (query: string) => {
 
 // ── Display helpers ───────────────────────────────────────────────────────────
 const RESET = '\x1b[0m';
-const BOLD  = '\x1b[1m';
+const BOLD = '\x1b[1m';
 const GREEN = '\x1b[32m';
-const RED   = '\x1b[31m';
-const CYAN  = '\x1b[36m';
-const GRAY  = '\x1b[90m';
+const RED = '\x1b[31m';
+const CYAN = '\x1b[36m';
+const GRAY = '\x1b[90m';
 const YELLOW = '\x1b[33m';
 const SGT_TIME_ZONE = 'Asia/Singapore';
 
@@ -166,12 +166,12 @@ function divider(title: string) {
 
 function decisionLabel(d: string): string {
     switch (d) {
-        case 'apply_consensus':    return `${GREEN}✅ APPLY — consensus${RESET}`;
-        case 'apply_with_caveat':  return `${GREEN}✅ APPLY — with caveat${RESET}`;
-        case 'deadlock_escalate':  return `${YELLOW}⚠️  DEADLOCK — your decision needed${RESET}`;
-        case 'skip_consensus':     return `${GRAY}⏩ SKIP — agents agree${RESET}`;
-        case 'veto_skip':          return `${RED}🚫 VETO — risk agent blocked this${RESET}`;
-        default:                   return `${GRAY}? ${d}${RESET}`;
+        case 'apply_consensus': return `${GREEN}✅ APPLY — consensus${RESET}`;
+        case 'apply_with_caveat': return `${GREEN}✅ APPLY — with caveat${RESET}`;
+        case 'deadlock_escalate': return `${YELLOW}⚠️  DEADLOCK — your decision needed${RESET}`;
+        case 'skip_consensus': return `${GRAY}⏩ SKIP — agents agree${RESET}`;
+        case 'veto_skip': return `${RED}🚫 VETO — risk agent blocked this${RESET}`;
+        default: return `${GRAY}? ${d}${RESET}`;
     }
 }
 
@@ -328,9 +328,9 @@ for (let idx = 0; idx < survivors.length; idx++) {
 
     // Print per-agent scores
     const v = persistResult.verdicts;
-    if (v.ambition)    console.log(`       🚀 Ambition   : ${v.ambition.verdict} (${v.ambition.ambition_score})`);
-    if (v.realism)     console.log(`       🎯 Realism    : ${v.realism.verdict} (${v.realism.match_score})`);
-    if (v.risk)        console.log(`       🛡  Risk       : ${v.risk.verdict} (${v.risk.risk_score})`);
+    if (v.ambition) console.log(`       🚀 Ambition   : ${v.ambition.verdict} (${v.ambition.ambition_score})`);
+    if (v.realism) console.log(`       🎯 Realism    : ${v.realism.verdict} (${v.realism.match_score})`);
+    if (v.risk) console.log(`       🛡  Risk       : ${v.risk.verdict} (${v.risk.risk_score})`);
     if (v.opportunity) console.log(`       ⚡ Opportunity : ${v.opportunity.verdict} (${v.opportunity.urgency_score})`);
 
     if (persistResult.agent_failures.length > 0) {

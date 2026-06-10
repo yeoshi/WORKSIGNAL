@@ -6,6 +6,8 @@ import type { ActionNeededItem } from '../types';
 export interface DecisionKanbanCardProps {
   item: ActionNeededItem;
   onOpenJob: (jobId: string) => void;
+  /** Opens the cover-letter draft modal (replaces the direct send flow). */
+  onApply: (jobId: string) => void;
   onSend: (jobId: string) => Promise<void>;
   onSkip: (jobId: string) => Promise<void>;
   onSave: (jobId: string) => Promise<void>;
@@ -15,7 +17,8 @@ export interface DecisionKanbanCardProps {
 export function DecisionKanbanCard({
   item,
   onOpenJob,
-  onSend,
+  onApply,
+  onSend: _onSend,
   onSkip,
   onSave,
 }: DecisionKanbanCardProps) {
@@ -61,10 +64,10 @@ export function DecisionKanbanCard({
               type="button"
               data-testid="decision-action-send"
               disabled={busy}
-              onClick={() => run(() => onSend(item.job_id))}
+              onClick={(e) => { e.stopPropagation(); onApply(item.job_id); }}
               className="rounded-md bg-ws-teal px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-ws-teal-mid disabled:opacity-50"
             >
-              Send
+              Apply
             </button>
             <button
               type="button"

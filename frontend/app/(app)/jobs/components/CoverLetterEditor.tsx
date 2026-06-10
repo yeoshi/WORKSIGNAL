@@ -15,6 +15,8 @@ export interface CoverLetterEditorProps {
   disabled?: boolean;
   originalValue?: string;
   onRegenerate?: () => void;
+  /** True while Bedrock is generating the cover letter — shows a spinner. */
+  isLoading?: boolean;
   editable?: boolean;
   company?: string;
   roleTitle?: string;
@@ -27,6 +29,7 @@ export function CoverLetterEditor({
   disabled = false,
   originalValue,
   onRegenerate,
+  isLoading = false,
   editable = true,
   company = 'company',
   roleTitle = 'role',
@@ -140,18 +143,27 @@ export function CoverLetterEditor({
         </p>
       ) : null}
 
-      <label htmlFor="cover-letter-textarea" className="sr-only">
-        Cover letter text
-      </label>
-      <textarea
-        id="cover-letter-textarea"
-        data-testid="cover-letter-textarea"
-        className="mt-3 min-h-52 w-full flex-1 resize-y rounded-lg border border-gray-300 p-3 text-sm leading-relaxed text-gray-800 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Write or edit your cover letter here..."
-      />
+      {isLoading ? (
+        <div className="mt-3 flex min-h-52 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-indigo-500" />
+          <p className="text-xs text-gray-500">Drafting your cover letter…</p>
+        </div>
+      ) : (
+        <>
+          <label htmlFor="cover-letter-textarea" className="sr-only">
+            Cover letter text
+          </label>
+          <textarea
+            id="cover-letter-textarea"
+            data-testid="cover-letter-textarea"
+            className="mt-3 min-h-52 w-full flex-1 resize-y rounded-lg border border-gray-300 p-3 text-sm leading-relaxed text-gray-800 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+            value={value}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Write or edit your cover letter here..."
+          />
+        </>
+      )}
     </section>
   );
 }

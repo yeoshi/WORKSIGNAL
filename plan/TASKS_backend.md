@@ -1068,6 +1068,12 @@ If time is short, do these first — they unblock the demo flow:
 | Frontend debate log view | ✅ Page exists | `app/jobs/[jobId]/` — DebateCard, DebateCardList, DecisionSummary |
 | Dashboard `action_needed` cards | ✅ Wired | Pulls deadlock jobs from DynamoDB |
 
+- Trigger this flow on user's command via one button on frontend 
+- When running is in progress, dashboard for the job, should be able to show agentic reasoning and full log of what the agent is doing 
+  - api call, to get the jobs opportunities - gets call responses from mcf and exa search (based on user profile, with final prefiling )
+  - multi agent debate 
+  - log debate, and verdict, 
+
 **MCF vs Exa for job sourcing:**
 - **MCF (current):** Free, SG-native, structured fields. Filter happens in `OpportunityScanner` by keyword (target roles) + `postingDate` recency. MCF doesn't expose `work_arrangement` field — all jobs get `'any'` which pre-filter now passes through as `'unknown'` (cannot confirm violation). This is correct behaviour.
 - **Exa fallback (`ExaFallback`):** Code exists in `discovery/exaFallback.ts`. It queries Exa with `"[role] Singapore jobs site:mycareersfuture.gov.sg"`. Needs `EXA_API_KEY`. Can be more targeted (embed salary, remote preference in query string) but results are less structured.

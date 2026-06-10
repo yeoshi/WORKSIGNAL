@@ -55,8 +55,22 @@ export async function GET(
 
         const verdictItem = verdictItems[0] ?? null;
 
+        // Load user record for base resume — run in parallel with verdict fetch.
+        const [, userRecord] = await Promise.all([
+            Promise.resolve(verdictItem), // already fetched above
+            db.get('Users', { user_id: user.userId }),
+        ]);
+
         // Assemble the Job Detail payload.
-        const response = {
+        const response: {
+            job: Record<string, unknown>;
+            debate: Record<string, unknown> | null;
+            masterDecision: unknown;
+            coverLetterText: string;
+            resumeUrl: string | null;
+            baseResumeUrl: string | null;
+            base_resume_s3_key: string | null;
+        } = {
             job: {
                 job_id: job.job_id,
                 company: job.company,
@@ -77,23 +91,37 @@ export async function GET(
                 }
                 : null,
             masterDecision: verdictItem?.master_decision ?? null,
-            coverLetterText: verdictItem?.cover_letter_text ?? '',
-            resumeUrl: null as string | null,
+            coverLetterText: (verdictItem?.cover_letter_text as string | undefined) ?? '',
+            resumeUrl: null,
+            baseResumeUrl: null,
+            base_resume_s3_key: (userRecord?.resume_s3_key as string | undefined) ?? null,
         };
 
-        // Generate a pre-signed URL for the resume if available.
-        if (verdictItem?.customised_resume_s3_key) {
-            try {
-                const { S3Helper } = await import('@worksignal/shared');
-                const s3 = new S3Helper({ bucket: process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents' });
-                response.resumeUrl = await s3.getPresignedUrl(
-                    verdictItem.customised_resume_s3_key as string,
-                );
-            } catch {
-                // Resume URL generation failed — continue without it.
-                response.resumeUrl = null;
-            }
-        }
+        const s3Bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
+
+        // Generate pre-signed URLs for customised resume (if any) and base resume.
+        const { S3Helper } = await import('@worksignal/shared');
+        const s3 = new S3Helper({ bucket: s3Bucket });
+
+        await Promise.all([
+            (async () => {
+                if (verdictItem?.customised_resume_s3_key) {
+                    try {
+                        response.resumeUrl = await s3.getPresignedUrl(
+                            verdictItem.customised_resume_s3_key as string,
+                        );
+                    } catch { /* continue */ }
+                }
+            })(),
+            (async () => {
+                const baseKey = userRecord?.resume_s3_key as string | undefined;
+                if (baseKey) {
+                    try {
+                        response.baseResumeUrl = await s3.getPresignedUrl(baseKey);
+                    } catch { /* continue */ }
+                }
+            })(),
+        ]);
 
         return Response.json(response);
     } catch (error) {

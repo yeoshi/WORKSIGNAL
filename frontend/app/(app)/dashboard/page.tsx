@@ -11,6 +11,7 @@ import { BriefModal } from './components/BriefModal';
 import { IssuesModal } from './components/IssuesModal';
 import { JobDetailModal } from './components/JobDetailModal';
 import { AgentRunModal } from './components/AgentRunModal';
+import { CoverLetterModal } from './components/CoverLetterModal';
 import { useDashboardData } from './useDashboardData';
 import { useAgentRun } from './hooks/useAgentRun';
 import { usePipeline } from '../pipeline/hooks/usePipeline';
@@ -39,8 +40,13 @@ export default function DashboardPage() {
   const [agentRunOpen, setAgentRunOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobShowActions, setSelectedJobShowActions] = useState(false);
+  const [applyJobId, setApplyJobId] = useState<string | null>(null);
 
   const agentRun = useAgentRun(reload);
+
+  const handleApply = useCallback((jobId: string) => {
+    setApplyJobId(jobId);
+  }, []);
 
   const actionNeeded = data?.action_needed ?? [];
 
@@ -135,7 +141,7 @@ export default function DashboardPage() {
                   bordered
                   label="Callback Rate"
                   value={
-                    callbackRate === null
+                    callbackRate == null
                       ? '—'
                       : `${Math.round(callbackRate * 100)}%`
                   }
@@ -155,6 +161,7 @@ export default function DashboardPage() {
                 actionNeeded={data.action_needed}
                 isLoading={pipelineLoading}
                 onOpenJob={handleOpenJob}
+                onApply={handleApply}
                 onSend={send}
                 onSkip={skip}
                 onSave={save}
@@ -212,6 +219,24 @@ export default function DashboardPage() {
         events={agentRun.events}
         onClose={() => { setAgentRunOpen(false); agentRun.reset(); }}
       />
+      {(() => {
+        const applyItem = actionNeeded.find((i) => i.job_id === applyJobId);
+        return (
+          <CoverLetterModal
+            open={applyJobId !== null}
+            jobId={applyJobId}
+            jobTitle={applyItem?.role_title ?? ''}
+            company={applyItem?.company ?? ''}
+            hasEmployerEmail={applyItem?.has_employer_email ?? false}
+            sourceUrl={applyItem?.source_url ?? null}
+            onClose={() => setApplyJobId(null)}
+            onSent={(jobId) => {
+              markSent(jobId);
+              setApplyJobId(null);
+            }}
+          />
+        );
+      })()}
     </main>
   );
 }
