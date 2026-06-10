@@ -1,4 +1,4 @@
-import type { AgentName, Decision, MasterDecision } from '@worksignal/shared';
+import type { AgentName, Decision, MasterDecision } from '@/app/types/shared';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { AGENT_THEME } from './agentTheme';
 import {

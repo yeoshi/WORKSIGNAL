@@ -7,7 +7,7 @@ import type {
   SnsLinkEntry,
   WorkExperienceEntry,
   WorkSampleEntry,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 
 export function emptyParsedProfile(): ParsedProfile {
   return {

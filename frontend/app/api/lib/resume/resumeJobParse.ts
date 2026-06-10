@@ -1,4 +1,4 @@
-import type { WorkExperienceEntry } from '@worksignal/shared';
+import type { WorkExperienceEntry } from '@/app/types/shared';
 import { DATE_RANGE_PATTERN, MONTH, parseDateRange } from './resumeDateUtils';
 
 const JOB_LINE_PIPE = new RegExp(

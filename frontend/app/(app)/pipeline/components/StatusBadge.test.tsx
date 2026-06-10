@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusBadge } from './StatusBadge';
-import type { ApplicationStatus } from '@worksignal/shared';
+import type { ApplicationStatus } from '@/app/types/shared';
 
 /**
  * Validates: Requirements 17.1

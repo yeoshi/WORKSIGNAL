@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { IssuesModal } from './IssuesModal';
 import type { DashboardIssue } from '../types';
-import type { Filter_Relaxation_Suggestion } from '@worksignal/shared';
+import type { Filter_Relaxation_Suggestion } from '@/app/types/shared';
 
 function makeIssue(): DashboardIssue {
   const suggestion: Filter_Relaxation_Suggestion = {

@@ -9,7 +9,7 @@ import {
   type ParsedProfile,
   type PriorityFactor,
   type ResidencyStatus,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import { hasConfirmedResumeProfile } from './parsedProfileDefaults';
 
 export type OnboardingRecord = {
@@ -29,6 +29,7 @@ export type OnboardingRecord = {
   dream_companies?: string[];
   priority_ranking?: PriorityFactor[];
   non_negotiables?: NonNegotiables;
+  updated_at?: string;
 };
 
 export function isOnboardingComplete(

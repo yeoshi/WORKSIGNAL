@@ -9,6 +9,7 @@
  * On success, creates an Application record in DynamoDB.
  */
 
+import { DynamoDBWrapper } from '@worksignal/shared';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/authOptions';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
@@ -59,7 +60,6 @@ export async function POST(request: Request) {
     }
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         const job = await db.get('Jobs', { job_id });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PRIORITY_FACTORS } from '@worksignal/shared';
+import { PRIORITY_FACTORS } from '@/app/types/shared';
 import { canAccessProfileSettings, isOnboardingComplete } from './onboardingStatus';
 
 const completeRecord = {

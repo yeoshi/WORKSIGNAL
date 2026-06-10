@@ -39,7 +39,14 @@ export function useAgentRun(onComplete?: () => void): AgentRunState {
             try {
                 const res = await fetch('/api/agent/run', { signal: ctrl.signal });
                 if (!res.ok || !res.body) {
-                    const msg = await res.text().catch(() => `HTTP ${res.status}`);
+                    const text = await res.text().catch(() => '');
+                    let msg = text || `HTTP ${res.status}`;
+                    try {
+                        const payload = JSON.parse(text) as { message?: string };
+                        if (payload.message) msg = payload.message;
+                    } catch {
+                        // not JSON — use raw text
+                    }
                     throw new Error(msg);
                 }
 

@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import { Button } from '../../components/onboarding/controls';
 import { removeCoverLetter, removeResume, uploadCoverLetter, uploadResume } from '../api';
 import { hasConfirmedResumeProfile } from '../lib/parsedProfileDefaults';

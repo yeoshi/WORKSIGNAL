@@ -1,4 +1,4 @@
-import type { NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkSuggestion } from '@/app/types/shared';
 import { connectionReachOutKey } from './networkStorage';
 
 export function daysSpanForReachOuts(

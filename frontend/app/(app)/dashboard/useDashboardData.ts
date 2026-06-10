@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { ApprovalState } from '@worksignal/shared';
+import type { ApprovalState } from '@/app/types/shared';
 import type { DashboardData } from './types';
 import { filterSkippedActionNeeded } from './lib/skippedJobsStorage';
 

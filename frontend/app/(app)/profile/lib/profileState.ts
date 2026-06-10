@@ -1,4 +1,4 @@
-import type { ParsedProfile } from '@worksignal/shared';
+import type { ParsedProfile } from '@/app/types/shared';
 import type { TargetsPayload } from '../../../onboarding/api';
 import { deriveFileNameFromS3Key } from '../../../onboarding/lib/deriveFileNameFromS3Key';
 import type { OnboardingRecord } from '../../../onboarding/lib/onboardingStatus';

@@ -8,6 +8,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
+import { DynamoDBWrapper, S3Helper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../../lib/auth';
 
 export async function POST(
@@ -37,7 +38,6 @@ export async function POST(
             );
         }
 
-        const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Verify job belongs to this user.

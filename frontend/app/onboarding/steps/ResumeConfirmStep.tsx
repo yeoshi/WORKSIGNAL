@@ -15,7 +15,7 @@ import type {
   SnsLinkEntry,
   WorkExperienceEntry,
   WorkSampleEntry,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 import {
   Button,
   DateRangeFields,

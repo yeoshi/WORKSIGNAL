@@ -1,4 +1,4 @@
-import type { Decision } from '@worksignal/shared';
+import type { Decision } from '@/app/types/shared';
 
 export type DecisionTier = 'green' | 'yellow' | 'red';
 

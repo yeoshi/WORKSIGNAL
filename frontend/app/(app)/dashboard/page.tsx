@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchOnboardingState } from '../../onboarding/api';
+import { isOnboardingComplete } from '../../onboarding/lib/onboardingStatus';
 import { DashboardHeader } from './components/DashboardHeader';
 import { InsightRail } from './components/InsightCards';
 import { PipelineKanban } from './components/PipelineKanban';
@@ -22,7 +24,7 @@ import {
   countPendingIssues,
 } from './lib/buildDashboardIssues';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
   const { data, state, removeActionNeeded, approveSuggestion, rejectSuggestion, reload } =
     useDashboardData();
@@ -239,4 +241,45 @@ export default function DashboardPage() {
       })()}
     </main>
   );
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isComplete = false;
+
+    void (async () => {
+      try {
+        const record = await fetchOnboardingState();
+        isComplete = isOnboardingComplete(record);
+      } catch (error) {
+        console.error('Onboarding check failed:', error);
+        isComplete = false;
+      }
+
+      if (!isComplete) {
+        router.replace('/onboarding');
+        return;
+      }
+
+      setOnboardingComplete(true);
+    })();
+  }, [router]);
+
+  if (onboardingComplete !== true) {
+    return (
+      <main className="mx-auto min-w-0 max-w-[1600px] space-y-5 overflow-x-hidden p-4 sm:space-y-6 sm:p-6 lg:px-8">
+        <p
+          data-testid="dashboard-loading"
+          className="ws-card p-6 text-sm text-ws-muted"
+        >
+          Loading your dashboard…
+        </p>
+      </main>
+    );
+  }
+
+  return <DashboardPageContent />;
 }

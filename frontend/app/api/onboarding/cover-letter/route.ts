@@ -3,6 +3,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { S3Helper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { extractPdfText } from '../../lib/extractPdfText';
 import { createOnboardingServiceForRequest } from '../../lib/onboardingPersistence';
@@ -11,6 +12,8 @@ import {
   isLocalOnboardingEnabled,
   putLocalUser,
 } from '../../lib/localOnboardingStore';
+import { uploadResume } from '../../lib/resumeUpload';
+import { getAwsRegion } from '../../lib/awsRegion';
 
 const LOCAL_COVER_LETTER_PREFIX = 'local/cover-letters';
 const MAX_SAMPLE_CHARS = 8_000;
@@ -67,12 +70,9 @@ export async function POST(request: NextRequest) {
       return Response.json({ ok: true, s3Key, sampleText });
     }
 
-    const { uploadResume } = await import('@worksignal/backend');
-    const { S3Helper } = await import('@worksignal/shared');
-
     const s3 = new S3Helper({
       bucket: process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents',
-      region: process.env.WORKSIGNAL_S3_REGION ?? 'ap-southeast-1',
+      region: getAwsRegion(),
     });
 
     const result = await uploadResume(

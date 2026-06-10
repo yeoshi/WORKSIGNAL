@@ -12,7 +12,7 @@
  * component tested in isolation.
  */
 
-import type { NetworkSuggestionSet } from '@worksignal/shared';
+import type { NetworkSuggestionSet } from '@/app/types/shared';
 
 /** Relative BFF endpoint serving the authenticated user's network suggestions. */
 export const NETWORK_ENDPOINT = '/api/network';

@@ -62,11 +62,19 @@ export async function GET(
         ]);
 
         // Assemble the Job Detail payload.
+        const customisedKey = verdictItem?.customised_resume_s3_key as string | undefined;
+        const baseResumeKey = userRecord?.resume_s3_key as string | undefined;
+
         const response: {
             job: Record<string, unknown>;
             debate: Record<string, unknown> | null;
             masterDecision: unknown;
             coverLetterText: string;
+            materials: {
+                resume_s3_key: string;
+                cover_letter_text: string;
+                customisation_applied: boolean;
+            };
             resumeUrl: string | null;
             baseResumeUrl: string | null;
             base_resume_s3_key: string | null;
@@ -92,9 +100,15 @@ export async function GET(
                 : null,
             masterDecision: verdictItem?.master_decision ?? null,
             coverLetterText: (verdictItem?.cover_letter_text as string | undefined) ?? '',
+            tailoringNotes: (verdictItem?.tailoring_notes as string | undefined) ?? '',
+            materials: {
+                resume_s3_key: customisedKey ?? baseResumeKey ?? '',
+                cover_letter_text: (verdictItem?.cover_letter_text as string | undefined) ?? '',
+                customisation_applied: Boolean(verdictItem?.customisation_applied),
+            },
             resumeUrl: null,
             baseResumeUrl: null,
-            base_resume_s3_key: (userRecord?.resume_s3_key as string | undefined) ?? null,
+            base_resume_s3_key: baseResumeKey ?? null,
         };
 
         const s3Bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
@@ -104,19 +118,16 @@ export async function GET(
 
         await Promise.all([
             (async () => {
-                if (verdictItem?.customised_resume_s3_key) {
+                if (customisedKey) {
                     try {
-                        response.resumeUrl = await s3.getPresignedUrl(
-                            verdictItem.customised_resume_s3_key as string,
-                        );
+                        response.resumeUrl = await s3.getPresignedUrl(customisedKey);
                     } catch { /* continue */ }
                 }
             })(),
             (async () => {
-                const baseKey = userRecord?.resume_s3_key as string | undefined;
-                if (baseKey) {
+                if (baseResumeKey) {
                     try {
-                        response.baseResumeUrl = await s3.getPresignedUrl(baseKey);
+                        response.baseResumeUrl = await s3.getPresignedUrl(baseResumeKey);
                     } catch { /* continue */ }
                 }
             })(),

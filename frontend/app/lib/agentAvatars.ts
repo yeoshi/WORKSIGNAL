@@ -1,4 +1,4 @@
-import type { AgentName } from '@worksignal/shared';
+import type { AgentName } from '@/app/types/shared';
 
 export type ExtendedAgentName = AgentName | 'orchestrator' | 'growth' | 'network';
 

@@ -1,4 +1,4 @@
-import type { Job } from '@worksignal/shared';
+import type { Job } from '@/app/types/shared';
 import { formatPostingTime, formatSalary } from './jobDetailTypes';
 
 export interface JobModalHeaderProps {

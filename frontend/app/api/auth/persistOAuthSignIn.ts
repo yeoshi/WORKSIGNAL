@@ -3,18 +3,23 @@
  * should be sent to onboarding (first sign-in only).
  */
 
-import {
-  createAuthService,
-  GMAIL_READONLY_SCOPE,
-  USERS_TABLE,
-  type AuthUserRecord,
-} from '@worksignal/backend';
-import type { DynamoDBWrapper } from '@worksignal/shared';
+import type { DynamoDBWrapper } from '@/app/api/lib/dynamodb';
+import { getApiBaseUrl } from '../lib/apiGateway';
 import {
   ensureLocalAuthUser,
   getLocalUser,
   isLocalOnboardingEnabled,
 } from '../lib/localOnboardingStore';
+
+export interface AuthUserRecord {
+  user_id: string;
+  email?: string;
+  name?: string;
+}
+
+export const USERS_TABLE = 'Users';
+export const GMAIL_READONLY_SCOPE =
+  'https://www.googleapis.com/auth/gmail.readonly';
 
 export interface OAuthSignInInput {
   profile: {
@@ -61,22 +66,20 @@ export async function persistOAuthSignIn(
     user_id: sub,
   });
 
-  const scope = input.account.scope ?? '';
-  const gmailScopeGranted = scope.includes(GMAIL_READONLY_SCOPE);
-
-  const authService = createAuthService({
-    db: input.db,
-    encryptionSecret: input.encryptionSecret,
+  const res = await fetch(`${getApiBaseUrl()}/auth/persist-oauth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      profile: input.profile,
+      account: input.account,
+      encryptionSecret: input.encryptionSecret,
+    }),
   });
 
-  await authService.onCallback(
-    { sub, email, name },
-    {
-      accessToken: input.account.access_token ?? '',
-      refreshToken: input.account.refresh_token ?? undefined,
-      gmailScopeGranted,
-    },
-  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || 'OAuth persistence failed');
+  }
 
   const isNewUser = existing === undefined;
 

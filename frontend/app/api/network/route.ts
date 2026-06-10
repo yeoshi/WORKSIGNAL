@@ -10,6 +10,7 @@ import { DynamoDBWrapper } from '@worksignal/shared';
 import { createNetworkAgent } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_NETWORK_BY_COMPANY } from '../lib/demo';
+import { listUserApplications } from '../lib/listUserApplications';
 
 export async function GET(request: Request) {
     if (DEMO_MODE) {
@@ -24,16 +25,7 @@ export async function GET(request: Request) {
 
     try {
         const db = new DynamoDBWrapper();
-
-        // Query for the user's network suggestions.
-        // The Network_Agent stores suggestions keyed by user_id + company.
-        // We query the user's applications to find companies with ≥2 applications
-        // and then look up any persisted suggestion sets.
-        const applications = await db.query('Applications', {
-            IndexName: 'user_id-company-index',
-            KeyConditionExpression: 'user_id = :u',
-            ExpressionAttributeValues: { ':u': user.userId },
-        });
+        const applications = await listUserApplications(db, user.userId);
 
         if (!applications || applications.length === 0) {
             return new Response(null, { status: 204 });

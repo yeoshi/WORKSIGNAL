@@ -5,7 +5,7 @@
  * as prominent metric cards.
  */
 
-import type { RecalibrationMetrics } from '@worksignal/shared';
+import type { RecalibrationMetrics } from '@/app/types/shared';
 
 export interface SummaryMetricsProps {
     metrics: RecalibrationMetrics;

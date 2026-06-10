@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { RoadmapTimeline, type WeekProgress } from './RoadmapTimeline';
-import type { RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapWeek } from '@/app/types/shared';
 
 const weeks: RoadmapWeek[] = [
   {

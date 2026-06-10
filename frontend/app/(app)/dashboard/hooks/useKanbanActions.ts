@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 import type { ActionNeededItem } from '../types';
 import { markJobSkipped } from '../lib/skippedJobsStorage';
 

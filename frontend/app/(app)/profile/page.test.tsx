@@ -4,7 +4,7 @@ import { forwardRef, useImperativeHandle } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ProfilePage from './page';
-import { PRIORITY_FACTORS } from '@worksignal/shared';
+import { PRIORITY_FACTORS } from '@/app/types/shared';
 import type { ProfileSectionHandle } from '../../onboarding/lib/profileSectionHandle';
 
 const mockReplace = vi.fn();

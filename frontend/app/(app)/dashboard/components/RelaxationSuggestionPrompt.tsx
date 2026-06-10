@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Filter_Relaxation_Suggestion } from '@worksignal/shared';
+import type { Filter_Relaxation_Suggestion } from '@/app/types/shared';
 import { Button } from '../../../components/ui/Button';
 
 const TARGET_LABELS: Record<

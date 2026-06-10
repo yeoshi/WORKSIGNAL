@@ -5,6 +5,7 @@ node_modules/
 dist/
 .next/
 out/
+frontend/.worksignal/
 cdk.out/
 *.tsbuildinfo
 

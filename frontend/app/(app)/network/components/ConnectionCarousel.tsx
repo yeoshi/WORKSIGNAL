@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkSuggestion } from '@/app/types/shared';
 import { ConnectionCard } from './ConnectionCard';
 import type { EnrichedNetworkSuggestion } from '../lib/connectionHelpers';
 import {

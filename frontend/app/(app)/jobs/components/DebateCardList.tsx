@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { VerdictSet } from '@worksignal/shared';
+import type { VerdictSet } from '@/app/types/shared';
 import { DebateCard } from './DebateCard';
 import { toAgentCards } from './agentTheme';
 

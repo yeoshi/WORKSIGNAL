@@ -8,7 +8,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { UpcomingEvents } from './UpcomingEvents';
-import type { NetworkingOpportunity } from '@worksignal/shared';
+import type { NetworkingOpportunity } from '@/app/types/shared';
 
 const mockEvents: NetworkingOpportunity[] = [
     {

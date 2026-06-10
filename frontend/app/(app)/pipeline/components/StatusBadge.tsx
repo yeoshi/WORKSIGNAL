@@ -8,7 +8,7 @@
  * until handled.
  */
 
-import type { ApplicationStatus } from '@worksignal/shared';
+import type { ApplicationStatus } from '@/app/types/shared';
 
 interface StatusBadgeStyle {
   /** Human-readable label shown in the badge. */

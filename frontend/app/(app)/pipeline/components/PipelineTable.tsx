@@ -7,7 +7,7 @@
  * presentational so it can be component-tested in isolation (task 23.2).
  */
 
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 import { StatusBadge } from './StatusBadge';
 import { formatSentDate } from '../lib/format';
 

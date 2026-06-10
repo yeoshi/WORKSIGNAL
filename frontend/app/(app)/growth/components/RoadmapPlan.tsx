@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapWeek } from '@/app/types/shared';
 import { RoadmapTimeline, type WeekProgress } from './RoadmapTimeline';
 
 const EMPTY_PROGRESS: WeekProgress = {

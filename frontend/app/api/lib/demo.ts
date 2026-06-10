@@ -7,8 +7,8 @@ export const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
 export const DEMO_USER = {
     userId: 'demo-user-001',
-    email: 'alex.tan@gmail.com',
-    name: 'Alex Tan',
+    email: 'e1398303@u.nus.edu',
+    name: 'Randall Koh',
 };
 
 export const DEMO_PIPELINE = [
@@ -178,8 +178,10 @@ export const DEMO_JOB_DETAIL = {
         decision: 'apply_consensus',
         summary:
             'All four agents recommend applying. Strong brand, aligned salary, and good skill match make this a high-priority application.',
-        resume_instructions: 'Lead with SQL dashboard work and your DBS internship metrics.',
-        cover_letter_angle: 'Emphasise regional product exposure and data-driven decision making.',
+        resume_instructions:
+            'Lead with CallBridge (accessibility app, Build for Good) and Cynapse AI/CV work. Add SQL/Python analytics from NUS Fintech Society; trim coursework.',
+        cover_letter_angle:
+            'Emphasise full-stack product builds plus data-driven experimentation for regional product teams.',
         agents_for: ['ambition', 'realism', 'risk', 'opportunity'],
         agents_against: [],
         user_action_required: false,
@@ -190,9 +192,10 @@ export const DEMO_JOB_DETAIL = {
         customisation_applied: true,
     },
     coverLetter: DEMO_COVER_LETTER,
+    tailoringNotes: '- Open with product leadership\n- Tie Grab mission to your fintech experience',
     resumeUrl: '/api/demo/resume?file=resume-001.pdf',
-    baseResumeS3Key: 'demo/original-resume.pdf',
-    baseResumeUrl: '/api/demo/resume?file=original-resume.pdf',
+    baseResumeS3Key: 'demo/randall-koh-resume.pdf',
+    baseResumeUrl: '/api/demo/resume?file=randall-koh-resume.pdf',
 };
 
 export const DEMO_GROWTH = {

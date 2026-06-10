@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { loadPipelineWithRetry } from './fetchPipeline';
-import type { Application } from '@worksignal/shared';
+import type { Application } from '@/app/types/shared';
 
 /**
  * Validates: Requirements 17.2

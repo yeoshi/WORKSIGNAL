@@ -4,8 +4,11 @@
 
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
-import { createOnboardingServiceForRequest } from '../../lib/onboardingPersistence';
-import type { NonNegotiables, PriorityFactor } from '@worksignal/shared';
+import {
+  createOnboardingServiceForRequest,
+  loadOnboardingUser,
+} from '../../lib/onboardingPersistence';
+import type { NonNegotiables, PriorityFactor } from '@/app/types/shared';
 
 interface TargetsPayload {
   target_roles: string[];
@@ -30,34 +33,55 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as TargetsPayload;
     const service = await createOnboardingServiceForRequest();
 
-    await service.setTargets(
-      user.userId,
-      body.target_roles ?? [],
-      body.target_industries ?? [],
-      body.dream_companies ?? [],
-    );
+    if ('editOnboarding' in service && typeof service.editOnboarding === 'function') {
+      await service.editOnboarding(user.userId, {
+        target_roles: body.target_roles ?? [],
+        target_industries: body.target_industries ?? [],
+        dream_companies: body.dream_companies ?? [],
+        priority_ranking: body.priority_ranking,
+        non_negotiables: body.non_negotiables,
+      });
+    } else {
+      await service.setTargets(
+        user.userId,
+        body.target_roles ?? [],
+        body.target_industries ?? [],
+        body.dream_companies ?? [],
+      );
 
-    if (body.priority_ranking) {
-      const rankResult = await service.setPriorityRanking(user.userId, body.priority_ranking);
-      if (rankResult) {
-        return Response.json(
-          { error: 'Validation', message: rankResult.message },
-          { status: 400 },
+      if (body.priority_ranking) {
+        const rankResult = await service.setPriorityRanking(
+          user.userId,
+          body.priority_ranking,
         );
+        if (rankResult) {
+          return Response.json(
+            { error: 'Validation', message: rankResult.message },
+            { status: 400 },
+          );
+        }
+      }
+
+      if (body.non_negotiables) {
+        const nnResult = await service.setNonNegotiables(
+          user.userId,
+          body.non_negotiables,
+        );
+        if (nnResult) {
+          return Response.json(
+            { error: 'Validation', message: nnResult.message },
+            { status: 400 },
+          );
+        }
       }
     }
 
-    if (body.non_negotiables) {
-      const nnResult = await service.setNonNegotiables(user.userId, body.non_negotiables);
-      if (nnResult) {
-        return Response.json(
-          { error: 'Validation', message: nnResult.message },
-          { status: 400 },
-        );
-      }
-    }
+    const record = await loadOnboardingUser(user.userId);
+    const minSalary = (
+      record?.non_negotiables as { min_salary?: number } | undefined
+    )?.min_salary;
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, min_salary: minSalary });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     const status = message.includes('ranking') || message.includes('salary') ? 400 : 500;

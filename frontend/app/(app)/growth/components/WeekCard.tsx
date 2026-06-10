@@ -9,7 +9,7 @@ import {
   ExternalLink,
   Hammer,
 } from 'lucide-react';
-import type { RoadmapResourceType, RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapResourceType, RoadmapWeek } from '@/app/types/shared';
 import { formatWeekMetadataStrip } from '../lib/format';
 
 const TYPE_ICON_CONFIG: Record<

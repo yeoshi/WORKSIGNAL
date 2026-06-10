@@ -1,28 +1,24 @@
 /**
  * GET /api/pipeline — List user's applications (Req 17).
- *
- * Authenticated BFF route that fronts the Application_Tracker.list operation.
- * Returns the user's applications for the Pipeline view (company, role, send
- * date, status — Req 17.1).
  */
 
-import { createApplicationTracker } from '@worksignal/backend';
+import { DynamoDBWrapper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_PIPELINE } from '../lib/demo';
+import { listUserApplications } from '../lib/listUserApplications';
 
 export async function GET() {
-    if (DEMO_MODE) return Response.json(DEMO_PIPELINE);
+  if (DEMO_MODE) return Response.json(DEMO_PIPELINE);
 
-    const user = await getAuthenticatedUser();
-    if (!user) return unauthorizedResponse();
+  const user = await getAuthenticatedUser();
+  if (!user) return unauthorizedResponse();
 
-    try {
-        const tracker = createApplicationTracker();
-
-        const applications = await tracker.list(user.userId);
-        return Response.json(applications);
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return Response.json({ error: 'Error', message }, { status: 500 });
-    }
+  try {
+    const db = new DynamoDBWrapper();
+    const applications = await listUserApplications(db, user.userId);
+    return Response.json(applications);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return Response.json({ error: 'Error', message }, { status: 500 });
+  }
 }

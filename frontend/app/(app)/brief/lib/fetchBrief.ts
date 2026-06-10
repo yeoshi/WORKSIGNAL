@@ -6,7 +6,7 @@
  * returning `null` for an empty state rather than throwing.
  */
 
-import type { RecalibrationLogEntry } from '@worksignal/shared';
+import type { RecalibrationLogEntry } from '@/app/types/shared';
 import type { BriefGrowthActivity, BriefNetworkActivity } from './briefTypes';
 
 /** Relative BFF endpoint serving the authenticated user's weekly brief. */

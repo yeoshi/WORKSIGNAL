@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Brain, TrendingUp, PauseCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
-import type { EnrichedMasterDecision, OrchestratorAction } from '@worksignal/shared';
+import type { EnrichedMasterDecision, OrchestratorAction } from '@/app/types/shared';
 
 export interface OrchestratorPanelProps {
   enriched: EnrichedMasterDecision;

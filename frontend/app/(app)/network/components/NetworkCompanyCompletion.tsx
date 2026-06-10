@@ -1,6 +1,6 @@
 'use client';
 
-import type { NetworkSuggestion } from '@worksignal/shared';
+import type { NetworkSuggestion } from '@/app/types/shared';
 import { getInitials } from '../lib/connectionHelpers';
 import { daysSpanForReachOuts } from '../lib/networkCompletion';
 

@@ -3,7 +3,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { RoadmapPlan } from './RoadmapPlan';
-import type { RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapWeek } from '@/app/types/shared';
 
 function makeWeek(week: number): RoadmapWeek {
   return {

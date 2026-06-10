@@ -13,7 +13,27 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { DynamoDBWrapper } from '@worksignal/shared';
 import { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, hasAnyValidVerdict, resolveEnriched, isInvalidVerdict } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
+import { getApiBaseUrl, shouldProxyAgentRunToRemote } from '../../lib/apiGateway';
+import { getAwsRegion } from '../../lib/awsRegion';
+import { generateAndPersistJobMaterials, shouldGenerateJobMaterials } from '../../lib/jobMaterialsGeneration';
+import { serializeUserProfileFromRecord } from '../../lib/serializeUserProfile';
 import { DEMO_MODE } from '../../lib/demo';
+
+const MCF_FETCH_TIMEOUT_MS = 45_000;
+
+function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MCF_FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
+export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 // ── SSE event shapes ────────────────────────────────────────────────────────
 
@@ -32,6 +52,9 @@ export type AgentRunEvent =
     | { type: 'agent_failed'; agent: AgentName }
     | { type: 'db_persist'; step: 'verdicts' | 'master_decision'; job_id: string; title: string; verdict_id?: string; decision?: string; stored_agents?: string[] }
     | { type: 'debate_result'; job_id: string; title: string; company: string; decision: string; summary: string | null; verdict_id: string }
+    | { type: 'materials_start'; job_id: string; title: string }
+    | { type: 'materials_complete'; job_id: string; title: string }
+    | { type: 'materials_failed'; job_id: string; title: string; message: string }
     | {
         type: 'orchestrator_reasoning';
         job_id: string;
@@ -53,13 +76,57 @@ export type AgentRunEvent =
 
 // ── GET handler ─────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(request: Request) {
     if (DEMO_MODE) {
         return Response.json({ error: 'Not available in demo mode' }, { status: 400 });
     }
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
+
+    if (shouldProxyAgentRunToRemote()) {
+        try {
+            const upstream = await fetch(`${getApiBaseUrl()}/agent/run`, {
+                headers: {
+                    cookie: request.headers.get('cookie') ?? '',
+                    accept: 'text/event-stream',
+                },
+            });
+
+            if (!upstream.ok || !upstream.body) {
+                const text = await upstream.text().catch(() => '');
+                return Response.json(
+                    {
+                        error: 'Error',
+                        message:
+                            text ||
+                            `Agent API returned ${upstream.status}. Check NEXT_PUBLIC_API_URL and that /agent/run is deployed on API Gateway.`,
+                    },
+                    { status: upstream.status || 502 },
+                );
+            }
+
+            return new Response(upstream.body, {
+                status: upstream.status,
+                headers: {
+                    'Content-Type':
+                        upstream.headers.get('content-type') ?? 'text/event-stream',
+                    'Cache-Control': 'no-cache, no-transform',
+                    Connection: 'keep-alive',
+                    'X-Accel-Buffering': 'no',
+                },
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Agent API unavailable';
+            return Response.json(
+                {
+                    error: 'Error',
+                    message: `${message}. Verify NEXT_PUBLIC_API_URL points to a live API Gateway endpoint.`,
+                },
+                { status: 502 },
+            );
+        }
+    }
 
     const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
@@ -103,7 +170,8 @@ async function runPipeline(
 
     await emit({ type: 'start', run_id: runId, user_name: userName });
 
-    const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
+    await emit({ type: 'scan_start' });
+    const REGION = getAwsRegion();
     const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
     const EXA_KEY = process.env.EXA_API_KEY ?? '';
 
@@ -154,19 +222,38 @@ async function runPipeline(
         }
     };
 
-    const db = new DynamoDBWrapper();
+    const db = new DynamoDBWrapper({ region: REGION });
 
-    // ── Load user record ────────────────────────────────────────────────────
     const rawUser = await db.get('Users', { user_id: userId });
-    if (!rawUser) throw new Error('User not found in DynamoDB — run the seed script first.');
+    if (!rawUser) {
+        throw new Error('Your profile was not found. Finish onboarding, then try again.');
+    }
     const userConfig = rawUser as unknown as Parameters<typeof preFilter>[1];
+    const pipelineStartedAt = Date.now();
+    const finishRun = async (
+        scanned: number,
+        survivors: number,
+        debated: number,
+        tally: Record<string, number>,
+    ) => {
+        await emit({
+            type: 'run_complete',
+            scanned,
+            survivors,
+            debated,
+            elapsed_s: (Date.now() - pipelineStartedAt) / 1000,
+            tally,
+        });
+    };
 
     // ── STEP 1: Scan ────────────────────────────────────────────────────────
     console.log(`[AgentRun] ─────────────────────────────────────────`);
     console.log(`[AgentRun] 🚀 Pipeline started — run_id: ${runId} | user: ${userName} (${userId})`);
-    await emit({ type: 'scan_start' });
     console.log(`[AgentRun] 🔍 Scanning MCF…`);
-    const scanner = createOpportunityScanner({ scanIntervalMs: 0 });
+    const scanner = createOpportunityScanner({
+        scanIntervalMs: 0,
+        fetchFn: fetchWithTimeout,
+    });
     const discovered = await scanner.scan(userId);
 
     const salaryStr = (min: number, max: number) => {
@@ -188,7 +275,10 @@ async function runPipeline(
         })),
     });
 
-    if (discovered.length === 0) return;
+    if (discovered.length === 0) {
+        await finishRun(0, 0, 0, {});
+        return;
+    }
 
     // ── STEP 2: Pre-filter ──────────────────────────────────────────────────
     type DiscoveredJob = (typeof discovered)[0];
@@ -217,11 +307,11 @@ async function runPipeline(
 
     if (survivors.length === 0) {
         await emit({ type: 'all_filtered', suggestion: null });
+        await finishRun(discovered.length, 0, 0, {});
         return;
     }
 
     // ── STEP 3: Debate ──────────────────────────────────────────────────────
-    const overallStart = Date.now();
     const tally: Record<string, number> = {};
 
     for (let idx = 0; idx < survivors.length; idx++) {
@@ -344,6 +434,28 @@ async function runPipeline(
         );
         console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
 
+        if (shouldGenerateJobMaterials(dec)) {
+            console.log(`[AgentRun] ⏳ Generating application materials for ${job.job_id}`);
+            await emit({ type: 'materials_start', job_id: job.job_id, title: job.role_title });
+            try {
+                const userProfile = serializeUserProfileFromRecord(rawUser as Record<string, unknown>);
+                await generateAndPersistJobMaterials({
+                    userId,
+                    jobId: job.job_id,
+                    verdictId: persistResult.verdict_id,
+                    job: job as unknown as Record<string, unknown>,
+                    decision: decision as unknown as Record<string, unknown>,
+                    userProfile,
+                });
+                console.log(`[AgentRun] ✓ Application materials saved for ${job.job_id}`);
+                await emit({ type: 'materials_complete', job_id: job.job_id, title: job.role_title });
+            } catch (materialsError) {
+                const msg = materialsError instanceof Error ? materialsError.message : 'Materials generation failed';
+                console.warn(`[AgentRun] ⚠ Materials generation failed for ${job.job_id}:`, msg);
+                await emit({ type: 'materials_failed', job_id: job.job_id, title: job.role_title, message: msg });
+            }
+        }
+
         tally[dec] = (tally[dec] ?? 0) + 1;
 
         await emit({
@@ -357,17 +469,8 @@ async function runPipeline(
         });
     }
 
-    const elapsedS = (Date.now() - overallStart) / 1000;
-
-    console.log(`[AgentRun] ✅ Pipeline complete in ${elapsedS.toFixed(1)}s | scanned: ${discovered.length} | debated: ${survivors.length} | tally: ${JSON.stringify(tally)}`);
+    console.log(`[AgentRun] ✅ Pipeline complete | scanned: ${discovered.length} | debated: ${survivors.length} | tally: ${JSON.stringify(tally)}`);
     console.log(`[AgentRun] ─────────────────────────────────────────`);
 
-    await emit({
-        type: 'run_complete',
-        scanned: discovered.length,
-        survivors: survivors.length,
-        debated: survivors.length,
-        elapsed_s: elapsedS,
-        tally,
-    });
+    await finishRun(discovered.length, survivors.length, survivors.length, tally);
 }

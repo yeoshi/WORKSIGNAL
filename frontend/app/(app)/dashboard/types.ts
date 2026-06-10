@@ -3,7 +3,7 @@
  *
  * These describe the shape returned by the dashboard BFF endpoint
  * (`GET /api/dashboard`, wired in task 24.1). They compose the shared
- * design contracts from `@worksignal/shared` into a single payload the
+ * design contracts from `@/app/types/shared` into a single payload the
  * dashboard renders. Until the API exists, the dashboard tolerates its
  * absence with loading / empty states.
  */
@@ -13,7 +13,7 @@ import type {
   Decision,
   Filter_Relaxation_Suggestion,
   RecalibrationLogEntry,
-} from '@worksignal/shared';
+} from '@/app/types/shared';
 
 /** A surfaced dashboard issue shown in the issues modal. */
 export type DashboardIssue =

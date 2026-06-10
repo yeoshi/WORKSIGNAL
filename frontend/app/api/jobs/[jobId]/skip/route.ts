@@ -6,6 +6,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { DynamoDBWrapper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../../lib/auth';
 import { DEMO_MODE } from '../../../lib/demo';
 
@@ -22,7 +23,6 @@ export async function POST(
 
     try {
         const { jobId } = params;
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Verify the job exists and belongs to this user.

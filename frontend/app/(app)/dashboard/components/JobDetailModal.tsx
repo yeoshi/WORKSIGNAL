@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Materials } from '@/app/types/shared';
 import { Modal } from '../../../components/ui/Modal';
 import { JobDetailView } from '../../jobs/components/JobDetailView';
 import { JobModalHeader } from '../../jobs/components/JobModalHeader';
@@ -29,80 +30,304 @@ export function JobDetailModal({
 }: JobDetailModalProps) {
   const { state, handleAction } = useJobDetail(jobId, open);
   const [coverLetter, setCoverLetter] = useState('');
-  const [isDraftingCoverLetter, setIsDraftingCoverLetter] = useState(false);
+  const [tailoringNotes, setTailoringNotes] = useState('');
   const [pendingAction, setPendingAction] = useState<JobDetailAction | null>(null);
-  // Overrides state.resumeUrl after a per-job custom resume is uploaded.
   const [customResumeUrl, setCustomResumeUrl] = useState<string | null>(null);
-  // Track which jobId we've already auto-drafted for — avoids duplicate calls.
-  const draftedForRef = useRef<string | null>(null);
+  const [customResumeS3Key, setCustomResumeS3Key] = useState<string | null>(null);
+  const [materialsState, setMaterialsState] = useState<Materials | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [ensuringMaterials, setEnsuringMaterials] = useState(false);
+  const ensureStartedForRef = useRef<string | null>(null);
+  const resumeEnsureStartedForRef = useRef<string | null>(null);
+  const [resumeGenerating, setResumeGenerating] = useState(false);
 
-  // Populate cover letter from API once loaded.
   useEffect(() => {
-    if (state.status === 'ready') {
-      setCoverLetter(state.data.coverLetter);
-    }
+    if (state.status !== 'ready') return;
+
+    setMaterialsState(state.data.materials);
+    setCoverLetter(state.data.coverLetter);
+    setTailoringNotes(state.data.tailoringNotes);
+    setCustomResumeUrl(state.resumeUrl);
+    setCustomResumeS3Key(
+      state.data.materials.customisation_applied
+        ? state.data.materials.resume_s3_key
+        : null,
+    );
+    setGenerationError(null);
   }, [state]);
 
-  // Auto-draft cover letter via Bedrock when the job loads and no letter exists yet.
-  useEffect(() => {
-    if (
-      state.status !== 'ready' ||
-      !jobId ||
-      state.data.coverLetter.trim() !== '' ||
-      draftedForRef.current === jobId ||
-      isDraftingCoverLetter
-    ) {
-      return;
+  const regenerateDraft = useCallback(async () => {
+    if (!showActions || !jobId || regenerating) return;
+
+    setRegenerating(true);
+    setGenerationError(null);
+    try {
+      const res = await fetch(
+        `/api/jobs/${encodeURIComponent(jobId)}/materials/regenerate`,
+        { method: 'POST' },
+      );
+      const data = (await res.json()) as {
+        ok?: boolean;
+        coverLetterText?: string;
+        tailoringNotes?: string;
+        resumeS3Key?: string | null;
+        resumeUrl?: string | null;
+        customisationApplied?: boolean;
+        message?: string;
+      };
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data.message ?? 'Could not regenerate materials.');
+      }
+
+      if (data.coverLetterText) setCoverLetter(data.coverLetterText);
+      if (data.tailoringNotes) setTailoringNotes(data.tailoringNotes);
+      if (data.resumeUrl) setCustomResumeUrl(data.resumeUrl);
+      if (data.resumeS3Key) {
+        setCustomResumeS3Key(data.resumeS3Key);
+        setMaterialsState((prev) => ({
+          ...(prev ?? {
+            resume_s3_key: data.resumeS3Key!,
+            cover_letter_text: data.coverLetterText ?? '',
+            customisation_applied: Boolean(data.customisationApplied),
+          }),
+          resume_s3_key: data.resumeS3Key!,
+          cover_letter_text: data.coverLetterText ?? prev?.cover_letter_text ?? '',
+          customisation_applied: Boolean(data.customisationApplied),
+        }));
+      }
+    } catch (error) {
+      setGenerationError(
+        error instanceof Error ? error.message : 'Could not regenerate materials.',
+      );
+    } finally {
+      setRegenerating(false);
     }
+  }, [showActions, jobId, regenerating]);
 
-    draftedForRef.current = jobId;
-    setIsDraftingCoverLetter(true);
-
-    fetch('/api/apply/draft', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ job_id: jobId }),
-    })
-      .then((r) => r.json())
-      .then((data: { cover_letter?: string }) => {
-        if (data.cover_letter?.trim()) {
-          setCoverLetter(data.cover_letter);
-        }
-      })
-      .catch(() => { /* leave empty — user can type manually */ })
-      .finally(() => setIsDraftingCoverLetter(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, jobId]);
-
-  // Regenerate cover letter on demand (wired to the ↺ button in CoverLetterEditor).
-  const regenerateDraft = useCallback(() => {
-    if (!jobId || isDraftingCoverLetter) return;
-    draftedForRef.current = null; // allow re-draft
-    setCoverLetter('');
-    setIsDraftingCoverLetter(true);
-
-    fetch('/api/apply/draft', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ job_id: jobId }),
-    })
-      .then((r) => r.json())
-      .then((data: { cover_letter?: string }) => {
-        setCoverLetter(data.cover_letter?.trim() ?? '');
-      })
-      .catch(() => {})
-      .finally(() => setIsDraftingCoverLetter(false));
-  }, [jobId, isDraftingCoverLetter]);
-
-  // Reset draft tracking and custom resume when the modal closes or switches job.
   useEffect(() => {
     if (!open) {
-      draftedForRef.current = null;
+      ensureStartedForRef.current = null;
+      resumeEnsureStartedForRef.current = null;
       setCoverLetter('');
-      setIsDraftingCoverLetter(false);
+      setTailoringNotes('');
       setCustomResumeUrl(null);
+      setCustomResumeS3Key(null);
+      setMaterialsState(null);
+      setGenerationError(null);
+      setRegenerating(false);
+      setEnsuringMaterials(false);
+      setResumeGenerating(false);
     }
   }, [open, jobId]);
+
+  // Cover letter exists but tailored resume PDF is missing (e.g. prior failed save).
+  useEffect(() => {
+    if (!open || !showActions || !jobId || state.status !== 'ready') return;
+    if (!coverLetter.trim()) return;
+    if (customResumeUrl || state.resumeUrl) return;
+    if (ensuringMaterials || regenerating) return;
+    if (resumeEnsureStartedForRef.current === jobId) return;
+
+    resumeEnsureStartedForRef.current = jobId;
+    let cancelled = false;
+    setResumeGenerating(true);
+    setGenerationError(null);
+
+    void (async () => {
+      const pollTimer = setInterval(() => {
+        void fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
+          headers: { accept: 'application/json' },
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((raw: Record<string, unknown> | null) => {
+            if (!raw || cancelled) return;
+            if (typeof raw.resumeUrl === 'string') {
+              setCustomResumeUrl(raw.resumeUrl);
+            }
+            const materials = raw.materials as Record<string, unknown> | undefined;
+            if (materials?.resume_s3_key && materials.customisation_applied) {
+              setCustomResumeS3Key(String(materials.resume_s3_key));
+              setMaterialsState((prev) => ({
+                ...(prev ?? {
+                  resume_s3_key: String(materials.resume_s3_key),
+                  cover_letter_text: coverLetter,
+                  customisation_applied: true,
+                }),
+                resume_s3_key: String(materials.resume_s3_key),
+                customisation_applied: true,
+              }));
+            }
+          })
+          .catch(() => undefined);
+      }, 1500);
+
+      try {
+        const res = await fetch(
+          `/api/jobs/${encodeURIComponent(jobId)}/materials/resume`,
+          { method: 'POST' },
+        );
+        const data = (await res.json()) as {
+          ok?: boolean;
+          resumeS3Key?: string | null;
+          resumeUrl?: string | null;
+          message?: string;
+        };
+
+        if (!res.ok || !data.ok) {
+          throw new Error(data.message ?? 'Could not generate tailored resume.');
+        }
+
+        if (data.resumeUrl) setCustomResumeUrl(data.resumeUrl);
+        if (data.resumeS3Key) {
+          setCustomResumeS3Key(data.resumeS3Key);
+          setMaterialsState((prev) => ({
+            ...(prev ?? {
+              resume_s3_key: data.resumeS3Key!,
+              cover_letter_text: coverLetter,
+              customisation_applied: true,
+            }),
+            resume_s3_key: data.resumeS3Key!,
+            customisation_applied: true,
+          }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setGenerationError(
+            error instanceof Error ? error.message : 'Could not generate tailored resume.',
+          );
+        }
+      } finally {
+        clearInterval(pollTimer);
+        if (!cancelled) setResumeGenerating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    showActions,
+    jobId,
+    state,
+    coverLetter,
+    customResumeUrl,
+    ensuringMaterials,
+    regenerating,
+  ]);
+
+  // Generate immediately if materials are missing; poll in parallel for partial saves.
+  useEffect(() => {
+    if (!open || !showActions || !jobId || state.status !== 'ready') return;
+    if (state.data.coverLetter.trim()) return;
+    if (ensureStartedForRef.current === jobId) return;
+
+    ensureStartedForRef.current = jobId;
+    let cancelled = false;
+    setEnsuringMaterials(true);
+    setGenerationError(null);
+
+    function applyFetchedMaterials(raw: Record<string, unknown>): boolean {
+      const materials = raw.materials as Record<string, unknown> | undefined;
+      const cl =
+        (typeof raw.coverLetterText === 'string' && raw.coverLetterText) ||
+        (materials && typeof materials.cover_letter_text === 'string'
+          ? (materials.cover_letter_text as string)
+          : '');
+      const tn =
+        typeof raw.tailoringNotes === 'string'
+          ? raw.tailoringNotes
+          : typeof raw.tailoring_notes === 'string'
+            ? raw.tailoring_notes
+            : '';
+
+      if (tn.trim()) setTailoringNotes(tn);
+      if (cl.trim()) setCoverLetter(cl);
+      if (typeof raw.resumeUrl === 'string') setCustomResumeUrl(raw.resumeUrl);
+      if (materials && typeof materials.resume_s3_key === 'string') {
+        setCustomResumeS3Key(materials.resume_s3_key);
+        setMaterialsState({
+          resume_s3_key: materials.resume_s3_key,
+          cover_letter_text: cl || (materials.cover_letter_text as string) || '',
+          customisation_applied: Boolean(materials.customisation_applied),
+        });
+      }
+
+      return Boolean(cl.trim());
+    }
+
+    async function pollJobMaterials(): Promise<boolean> {
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`, {
+        headers: { accept: 'application/json' },
+      });
+      if (!res.ok) return false;
+      const raw = (await res.json()) as Record<string, unknown>;
+      return applyFetchedMaterials(raw);
+    }
+
+    void (async () => {
+      try {
+        if (await pollJobMaterials()) return;
+
+        const pollTimer = setInterval(() => {
+          void pollJobMaterials();
+        }, 1500);
+
+        try {
+          const res = await fetch(
+            `/api/jobs/${encodeURIComponent(jobId)}/materials/regenerate`,
+            { method: 'POST' },
+          );
+          const data = (await res.json()) as {
+            ok?: boolean;
+            coverLetterText?: string;
+            tailoringNotes?: string;
+            resumeS3Key?: string | null;
+            resumeUrl?: string | null;
+            customisationApplied?: boolean;
+            message?: string;
+          };
+
+          if (!res.ok || !data.ok) {
+            throw new Error(data.message ?? 'Could not generate materials.');
+          }
+
+          if (data.coverLetterText) setCoverLetter(data.coverLetterText);
+          if (data.tailoringNotes) setTailoringNotes(data.tailoringNotes);
+          if (data.resumeUrl) setCustomResumeUrl(data.resumeUrl);
+          if (data.resumeS3Key) {
+            setCustomResumeS3Key(data.resumeS3Key);
+            setMaterialsState((prev) => ({
+              ...(prev ?? {
+                resume_s3_key: data.resumeS3Key!,
+                cover_letter_text: data.coverLetterText ?? '',
+                customisation_applied: Boolean(data.customisationApplied),
+              }),
+              resume_s3_key: data.resumeS3Key!,
+              cover_letter_text: data.coverLetterText ?? prev?.cover_letter_text ?? '',
+              customisation_applied: Boolean(data.customisationApplied),
+            }));
+          }
+        } finally {
+          clearInterval(pollTimer);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setGenerationError(
+            error instanceof Error ? error.message : 'Could not generate materials.',
+          );
+        }
+      } finally {
+        if (!cancelled) setEnsuringMaterials(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, showActions, jobId, state]);
 
   const runAction = async (action: JobDetailAction) => {
     if (!showActions || !jobId) return;
@@ -136,6 +361,18 @@ export function JobDetailModal({
         showSave={false}
       />
     ) : null;
+
+  const viewData =
+    state.status === 'ready' && materialsState
+      ? { ...state.data, materials: materialsState }
+      : state.status === 'ready'
+        ? state.data
+        : null;
+
+  const activeResumeS3Key =
+    customResumeS3Key ?? materialsState?.resume_s3_key ?? viewData?.materials.resume_s3_key;
+
+  const materialsLoading = ensuringMaterials || regenerating;
 
   return (
     <Modal
@@ -182,21 +419,38 @@ export function JobDetailModal({
           We couldn&apos;t load this job right now. {state.message}
         </p>
       )}
-      {state.status === 'ready' && (
+      {state.status === 'ready' && viewData && (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
             <JobDetailView
-              data={state.data}
+              data={viewData}
               resumeUrl={customResumeUrl ?? state.resumeUrl}
+              resumeS3Key={activeResumeS3Key}
               baseResumeUrl={state.baseResumeUrl}
               baseResumeS3Key={state.baseResumeS3Key}
               showActions={showActions}
               externalActionBar={showActions}
               coverLetter={coverLetter}
               onCoverLetterChange={setCoverLetter}
-              onRegenerate={regenerateDraft}
-              isDraftingCoverLetter={isDraftingCoverLetter}
-              onCustomResumeUploaded={(_key, url) => setCustomResumeUrl(url)}
+              onRegenerate={() => void regenerateDraft()}
+              coverLetterLoading={materialsLoading && !coverLetter.trim()}
+              tailoringNotes={showActions ? tailoringNotes : undefined}
+              tailoringLoading={materialsLoading && !tailoringNotes.trim()}
+              generationError={showActions ? generationError : null}
+              resumeLoading={
+                resumeGenerating ||
+                (materialsLoading && !customResumeUrl && !state.resumeUrl)
+              }
+              resumeGenerationError={showActions ? generationError : null}
+              onCustomResumeUploaded={(key, url) => {
+                setCustomResumeUrl(url);
+                setCustomResumeS3Key(key);
+                setMaterialsState((prev) =>
+                  prev
+                    ? { ...prev, resume_s3_key: key, customisation_applied: true }
+                    : prev,
+                );
+              }}
               embedded
             />
           </div>

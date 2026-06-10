@@ -14,7 +14,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RelaxationSuggestionPrompt } from './RelaxationSuggestionPrompt';
-import type { Filter_Relaxation_Suggestion } from '@worksignal/shared';
+import type { Filter_Relaxation_Suggestion } from '@/app/types/shared';
 
 function makePendingSuggestion(
     overrides?: Partial<Filter_Relaxation_Suggestion>,

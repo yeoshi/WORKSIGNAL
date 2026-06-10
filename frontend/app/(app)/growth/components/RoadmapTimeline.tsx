@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
-import type { RoadmapWeek } from '@worksignal/shared';
+import type { RoadmapWeek } from '@/app/types/shared';
 import { summarizeWeekPreview } from '../lib/format';
 import { WeekCard } from './WeekCard';
 

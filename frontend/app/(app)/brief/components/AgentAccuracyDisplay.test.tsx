@@ -9,7 +9,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { AgentAccuracyDisplay } from './AgentAccuracyDisplay';
-import type { AgentName, AgentAccuracy } from '@worksignal/shared';
+import type { AgentName, AgentAccuracy } from '@/app/types/shared';
 import type { BriefGrowthActivity, BriefNetworkActivity } from '../lib/briefTypes';
 
 const mockPerformance: Record<AgentName, AgentAccuracy> = {

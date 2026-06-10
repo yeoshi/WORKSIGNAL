@@ -13,7 +13,7 @@
  * decoded body.
  */
 
-import type { SkillGapRoadmap } from '@worksignal/shared';
+import type { SkillGapRoadmap } from '@/app/types/shared';
 
 /** Relative BFF endpoint serving the authenticated user's growth roadmap. */
 export const GROWTH_ENDPOINT = '/api/growth';

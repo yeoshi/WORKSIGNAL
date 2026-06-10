@@ -1,4 +1,4 @@
-import type { RoadmapResourceType } from '@worksignal/shared';
+import type { RoadmapResourceType } from '@/app/types/shared';
 
 interface ResourceTypeStyle {
   label: string;

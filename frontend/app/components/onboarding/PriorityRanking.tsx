@@ -6,7 +6,7 @@ import {
   Droppable,
   type DropResult,
 } from '@hello-pangea/dnd';
-import type { PriorityFactor } from '@worksignal/shared';
+import type { PriorityFactor } from '@/app/types/shared';
 import { GripVertical } from 'lucide-react';
 import { priorityFactorLabel } from '../../onboarding/validation';
 

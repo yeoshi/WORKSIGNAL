@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Job, MasterDecision, Materials } from '@worksignal/shared';
+import type { Job, MasterDecision, Materials } from '@/app/types/shared';
 import { ResumePreview } from './ResumePreview';
 import { CoverLetterEditor } from './CoverLetterEditor';
 
@@ -18,7 +18,13 @@ export interface ApplicationMaterialsProps {
   editable: boolean;
   disabled?: boolean;
   onRegenerate?: () => void;
-  isDraftingCoverLetter?: boolean;
+  coverLetterLoading?: boolean;
+  tailoringNotes?: string;
+  tailoringLoading?: boolean;
+  generationError?: string | null;
+  resumeLoading?: boolean;
+  resumeGenerationError?: string | null;
+  resumeS3Key?: string;
   onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
 }
 
@@ -35,7 +41,13 @@ export function ApplicationMaterials({
   editable,
   disabled = false,
   onRegenerate,
-  isDraftingCoverLetter = false,
+  coverLetterLoading = false,
+  tailoringNotes,
+  tailoringLoading = false,
+  generationError = null,
+  resumeLoading = false,
+  resumeGenerationError = null,
+  resumeS3Key,
   onCustomResumeUploaded,
 }: ApplicationMaterialsProps) {
   const [usingOriginalResume, setUsingOriginalResume] = useState(false);
@@ -44,10 +56,12 @@ export function ApplicationMaterials({
     editable && materials.customisation_applied && baseResumeS3Key,
   );
 
-  const activeResumeUrl = usingOriginalResume ? baseResumeUrl : resumeUrl;
+  const activeResumeUrl = usingOriginalResume
+    ? baseResumeUrl
+    : (resumeUrl ?? (!materials.customisation_applied ? baseResumeUrl : null));
   const activeResumeS3Key = usingOriginalResume
     ? (baseResumeS3Key ?? materials.resume_s3_key)
-    : materials.resume_s3_key;
+    : (resumeS3Key ?? materials.resume_s3_key);
 
   return (
     <section
@@ -66,16 +80,21 @@ export function ApplicationMaterials({
         onUseOriginalResume={() => setUsingOriginalResume(true)}
         onUseCustomisedResume={() => setUsingOriginalResume(false)}
         jobId={job.job_id}
+        resumeLoading={resumeLoading}
+        resumeGenerationError={resumeGenerationError}
         onCustomResumeUploaded={onCustomResumeUploaded}
       />
       <CoverLetterEditor
-        value={isDraftingCoverLetter ? '' : coverLetter}
+        value={coverLetter}
         onChange={onCoverLetterChange}
         decision={decision}
         disabled={disabled}
         originalValue={originalCoverLetter}
         onRegenerate={onRegenerate}
-        isLoading={isDraftingCoverLetter}
+        isLoading={coverLetterLoading}
+        tailoringNotes={tailoringNotes}
+        tailoringLoading={tailoringLoading}
+        generationError={generationError}
         editable={editable}
         company={job.company}
         roleTitle={job.role_title}

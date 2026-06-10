@@ -10,7 +10,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ThresholdAdjustments } from './ThresholdAdjustments';
-import type { RecalibrationAdjustment } from '@worksignal/shared';
+import type { RecalibrationAdjustment } from '@/app/types/shared';
 
 const mockAdjustments: RecalibrationAdjustment[] = [
     {
