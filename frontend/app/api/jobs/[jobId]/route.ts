@@ -7,6 +7,7 @@
  */
 
 import { NextRequest } from 'next/server';
+import { DynamoDBWrapper, S3Helper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { DEMO_MODE, DEMO_JOB_DETAIL } from '../../lib/demo';
 
@@ -26,7 +27,6 @@ export async function GET(
 
     try {
         const { jobId } = params;
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Load the job record.
@@ -100,7 +100,6 @@ export async function GET(
         const s3Bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
 
         // Generate pre-signed URLs for customised resume (if any) and base resume.
-        const { S3Helper } = await import('@worksignal/shared');
         const s3 = new S3Helper({ bucket: s3Bucket });
 
         await Promise.all([

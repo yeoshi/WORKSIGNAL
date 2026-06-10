@@ -15,6 +15,8 @@
  * (NetworkAgent, PreFilter) — returned as [] until those Lambdas exist.
  */
 
+import { DynamoDBWrapper } from '@worksignal/shared';
+import { createApplicationTracker } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_DASHBOARD } from '../lib/demo';
 
@@ -28,9 +30,6 @@ export async function GET() {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
-        const { createApplicationTracker } = await import('@worksignal/backend');
-
         const db = new DynamoDBWrapper();
         const tracker = createApplicationTracker();
 

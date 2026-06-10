@@ -6,6 +6,7 @@
  * date, status — Req 17.1).
  */
 
+import { createApplicationTracker } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_PIPELINE } from '../lib/demo';
 
@@ -16,7 +17,6 @@ export async function GET() {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { createApplicationTracker } = await import('@worksignal/backend');
         const tracker = createApplicationTracker();
 
         const applications = await tracker.list(user.userId);

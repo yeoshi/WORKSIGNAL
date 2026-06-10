@@ -6,6 +6,8 @@
  * connection suggestions (alumni → community → cold), and upcoming events.
  */
 
+import { DynamoDBWrapper } from '@worksignal/shared';
+import { createNetworkAgent } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_NETWORK_BY_COMPANY } from '../lib/demo';
 
@@ -21,7 +23,6 @@ export async function GET(request: Request) {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Query for the user's network suggestions.
@@ -56,7 +57,6 @@ export async function GET(request: Request) {
         const [company, applicationCount] = targetCompany;
 
         // Try to build suggestions on-the-fly using the Network_Agent.
-        const { createNetworkAgent } = await import('@worksignal/backend');
         const agent = createNetworkAgent({ db });
 
         try {

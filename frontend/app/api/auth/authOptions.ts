@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { DynamoDBWrapper } from '@worksignal/shared';
 import { DEMO_MODE } from '../lib/demo';
 import { persistOAuthSignIn } from './persistOAuthSignIn';
 
@@ -32,7 +33,6 @@ export const authOptions: NextAuthOptions = {
       }
 
       try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
         const result = await persistOAuthSignIn({
           profile: profile as {

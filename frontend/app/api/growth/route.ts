@@ -6,6 +6,7 @@
  * Growth Roadmap view.
  */
 
+import { DynamoDBWrapper } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
 import { DEMO_MODE, DEMO_GROWTH } from '../lib/demo';
 
@@ -16,7 +17,6 @@ export async function GET() {
     if (!user) return unauthorizedResponse();
 
     try {
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Query the SkillGaps table for this user's roadmaps.

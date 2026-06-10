@@ -7,6 +7,8 @@
  */
 
 import { NextRequest } from 'next/server';
+import { DynamoDBWrapper } from '@worksignal/shared';
+import { createApplicationSender } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../../lib/auth';
 import { DEMO_MODE } from '../../../lib/demo';
 
@@ -26,7 +28,6 @@ export async function POST(
         const body = await request.json().catch(() => ({}));
         const { coverLetter } = body as { coverLetter?: string };
 
-        const { DynamoDBWrapper } = await import('@worksignal/shared');
         const db = new DynamoDBWrapper();
 
         // Verify the job exists and belongs to this user.
@@ -54,7 +55,6 @@ export async function POST(
         }
 
         // Build a send context and invoke the Application_Sender.
-        const { createApplicationSender } = await import('@worksignal/backend');
         const sender = createApplicationSender({
             loadContext: async () => ({
                 user_id: user.userId,

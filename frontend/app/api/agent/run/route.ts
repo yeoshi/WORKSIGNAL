@@ -10,6 +10,8 @@
  */
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { DynamoDBWrapper } from '@worksignal/shared';
+import { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, hasAnyValidVerdict, resolveEnriched, isInvalidVerdict } from '@worksignal/backend';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
 import { DEMO_MODE } from '../../lib/demo';
 
@@ -100,10 +102,6 @@ async function runPipeline(
     const runId = randomUUID();
 
     await emit({ type: 'start', run_id: runId, user_name: userName });
-
-    // Lazy imports — AWS SDK needs env vars set before use.
-    const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const { createOpportunityScanner, preFilter, runAmbitionAgent, runRealismAgent, runRiskAgent, runOpportunityAgent, persistAgentVerdicts, hasAnyValidVerdict, resolveEnriched, isInvalidVerdict } = await import('@worksignal/backend');
 
     const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
     const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
