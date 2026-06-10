@@ -91,11 +91,13 @@ export async function GET() {
             })
         );
 
-        // Keep only verdicts where the Master Orchestrator needs user input
+        // Keep only verdicts where the Master Orchestrator needs user input.
+        // deadlock_escalate always requires the user to break the tie (covers
+        // records written before decisionTree.ts was fixed to set the flag).
         const actionNeeded = verdictChecks
             .filter(({ verdict }) => {
                 const md = verdict?.master_decision as Record<string, unknown> | undefined;
-                return md?.user_action_required === true;
+                return md?.user_action_required === true || md?.decision === 'deadlock_escalate';
             })
             .map(({ job, verdict }) => {
                 const md = verdict?.master_decision as Record<string, unknown>;

@@ -28,6 +28,7 @@ export type AgentRunEvent =
     | { type: 'exa_research'; query: string }
     | { type: 'agent_result'; agent: AgentName; verdict: string; score: number; reasoning: string; key_argument: string; extra?: Record<string, unknown> }
     | { type: 'agent_failed'; agent: AgentName }
+    | { type: 'db_persist'; step: 'verdicts' | 'master_decision'; job_id: string; title: string; verdict_id?: string; decision?: string; stored_agents?: string[] }
     | { type: 'debate_result'; job_id: string; title: string; company: string; decision: string; summary: string | null; verdict_id: string }
     | { type: 'run_complete'; scanned: number; survivors: number; debated: number; elapsed_s: number; tally: Record<string, number> }
     | { type: 'error'; message: string };
@@ -147,7 +148,10 @@ async function runPipeline(
     const userConfig = rawUser as unknown as Parameters<typeof preFilter>[1];
 
     // ── STEP 1: Scan ────────────────────────────────────────────────────────
+    console.log(`[AgentRun] ─────────────────────────────────────────`);
+    console.log(`[AgentRun] 🚀 Pipeline started — run_id: ${runId} | user: ${userName} (${userId})`);
     await emit({ type: 'scan_start' });
+    console.log(`[AgentRun] 🔍 Scanning MCF…`);
     const scanner = createOpportunityScanner({ scanIntervalMs: 0 });
     const discovered = await scanner.scan(userId);
 
@@ -259,7 +263,10 @@ async function runPipeline(
             }),
         ]);
 
-        // Persist all 4 verdicts
+        // ── Persist 4 verdicts → DynamoDB AgentVerdicts ────────────────────
+        console.log(`[AgentRun] ⏳ Persisting verdicts: "${job.role_title}" @ ${job.company} (${job.job_id})`);
+        await emit({ type: 'db_persist', step: 'verdicts', job_id: job.job_id, title: job.role_title });
+
         const persistResult = await persistAgentVerdicts(
             {
                 job_id: job.job_id,
@@ -269,13 +276,18 @@ async function runPipeline(
             { db },
         );
 
-        // Resolve master decision
+        const storedAgents = (Object.keys(persistResult.verdicts) as string[]);
+        console.log(`[AgentRun] ✓ AgentVerdicts written — verdict_id: ${persistResult.verdict_id} | agents: [${storedAgents.join(', ')}]${persistResult.agent_failures.length > 0 ? ` | failures: [${persistResult.agent_failures.join(', ')}]` : ''}`);
+
+        // ── Resolve master decision + update same record ────────────────────
         const degResult = resolveDegraded(persistResult.verdicts);
         const decision = degResult.resolved ? degResult.decision : null;
         const dec = decision?.decision ?? 'no_decision';
 
-        // Update verdict record with master decision
         if (decision) {
+            console.log(`[AgentRun] ⏳ Writing master_decision: "${dec}" → verdict_id: ${persistResult.verdict_id}`);
+            await emit({ type: 'db_persist', step: 'master_decision', job_id: job.job_id, title: job.role_title, verdict_id: persistResult.verdict_id, decision: dec, stored_agents: storedAgents });
+
             await db.update(
                 'AgentVerdicts',
                 { verdict_id: persistResult.verdict_id },
@@ -284,6 +296,9 @@ async function runPipeline(
                     ExpressionAttributeValues: { ':md': decision },
                 },
             );
+            console.log(`[AgentRun] ✓ master_decision persisted → DynamoDB AgentVerdicts`);
+        } else {
+            console.log(`[AgentRun] ⚠ No master decision (degraded — no valid verdicts for ${job.job_id})`);
         }
 
         tally[dec] = (tally[dec] ?? 0) + 1;
@@ -300,6 +315,9 @@ async function runPipeline(
     }
 
     const elapsedS = (Date.now() - overallStart) / 1000;
+
+    console.log(`[AgentRun] ✅ Pipeline complete in ${elapsedS.toFixed(1)}s | scanned: ${discovered.length} | debated: ${survivors.length} | tally: ${JSON.stringify(tally)}`);
+    console.log(`[AgentRun] ─────────────────────────────────────────`);
 
     await emit({
         type: 'run_complete',

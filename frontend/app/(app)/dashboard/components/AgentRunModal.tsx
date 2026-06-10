@@ -196,7 +196,7 @@ function renderEvents(events: AgentRunEvent[]): JSX.Element[] {
             );
         } else if (ev.type === 'debate_start') {
             currentDebate = { title: ev.title, company: ev.company, salary: ev.salary, agents: [] };
-        } else if ((ev.type === 'agent_result' || ev.type === 'agent_failed' || ev.type === 'exa_research') && currentDebate) {
+        } else if ((ev.type === 'agent_result' || ev.type === 'agent_failed' || ev.type === 'exa_research' || ev.type === 'db_persist') && currentDebate) {
             currentDebate.agents.push(ev);
         } else if (ev.type === 'debate_result') {
             if (currentDebate) {
@@ -232,6 +232,7 @@ function renderEvents(events: AgentRunEvent[]): JSX.Element[] {
         const agentResults = d.agents.filter((e): e is Extract<AgentRunEvent, { type: 'agent_result' }> => e.type === 'agent_result');
         const exaQueries = d.agents.filter((e): e is Extract<AgentRunEvent, { type: 'exa_research' }> => e.type === 'exa_research');
         const failedAgents = d.agents.filter((e): e is Extract<AgentRunEvent, { type: 'agent_failed' }> => e.type === 'agent_failed');
+        const persistEvents = d.agents.filter((e): e is Extract<AgentRunEvent, { type: 'db_persist' }> => e.type === 'db_persist');
 
         sections.push(
             <Section
@@ -266,6 +267,21 @@ function renderEvents(events: AgentRunEvent[]): JSX.Element[] {
                 {d.decision && (
                     <div className="mt-3">
                         <DecisionBadge decision={d.decision.decision} summary={d.decision.summary} />
+                    </div>
+                )}
+
+                {/* DynamoDB persistence status */}
+                {persistEvents.length > 0 && (
+                    <div className="mt-2 space-y-0.5 border-t border-ws-line pt-2">
+                        {persistEvents.map((pe, i) => (
+                            <p key={i} className="flex items-center gap-1.5 text-[11px] text-ws-muted font-mono">
+                                <span className="text-ws-teal">✓</span>
+                                {pe.step === 'verdicts'
+                                    ? `DynamoDB AgentVerdicts written`
+                                    : `master_decision: ${pe.decision ?? '?'} → ${pe.verdict_id?.slice(0, 8) ?? ''}…`
+                                }
+                            </p>
+                        ))}
                     </div>
                 )}
 
@@ -411,7 +427,13 @@ export function AgentRunModal({ open, state, events, onClose }: AgentRunModalPro
                     {/* Summary block */}
                     {completeEvent && (
                         <div className="rounded-xl border border-ws-teal/30 bg-ws-teal/5 p-4">
-                            <p className="font-semibold text-ws-ink text-sm mb-2">Run Complete</p>
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                                <p className="font-semibold text-ws-ink text-sm">Run Complete</p>
+                                <span className="flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    Dashboard refreshed
+                                </span>
+                            </div>
                             <div className="grid grid-cols-3 gap-3 text-center">
                                 <div>
                                     <p className="text-lg font-bold text-ws-ink">{completeEvent.scanned}</p>
