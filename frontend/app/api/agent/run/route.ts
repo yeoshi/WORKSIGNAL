@@ -11,11 +11,7 @@
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
-import {
-  getApiBaseUrl,
-  isRemoteBackendConfigured,
-  shouldProxyAgentRunToRemote,
-} from '../../lib/apiGateway';
+import { getApiBaseUrl, shouldProxyAgentRunToRemote } from '../../lib/apiGateway';
 import { getAwsRegion } from '../../lib/awsRegion';
 import { loadAgentBackendModules } from '../../lib/agentBackend';
 import { DEMO_MODE } from '../../lib/demo';
@@ -103,17 +99,6 @@ export async function GET(request: Request) {
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
-
-    if (process.env.VERCEL === '1' && !isRemoteBackendConfigured()) {
-        return Response.json(
-            {
-                error: 'Error',
-                message:
-                    'Run Agent is not available on this deployment yet. Set NEXT_PUBLIC_API_URL to your AWS API Gateway URL, or use the local dev server.',
-            },
-            { status: 503 },
-        );
-    }
 
     if (shouldProxyAgentRunToRemote()) {
         try {
