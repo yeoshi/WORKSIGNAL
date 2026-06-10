@@ -82,6 +82,7 @@ const USER_ID = '109848448123861557723';   // Rose's Google OAuth sub
 const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
 const EXA_KEY = process.env.EXA_API_KEY ?? '';
+const CLEAR_OLD = (process.env.CLEAR_OLD ?? 'false').toLowerCase() === 'true';
 
 // ── Bedrock client ────────────────────────────────────────────────────────────
 const bedrockClient = new BedrockRuntimeClient({ region: REGION });
@@ -305,6 +306,45 @@ const nn = (user.non_negotiables as unknown) as Record<string, unknown>;
 console.log(`    Min salary       : $${String(nn?.min_salary ?? 0)}`);
 console.log(`    Employment type  : ${(nn?.employment_type as string[] | undefined)?.join(', ') ?? 'any'}`);
 console.log(`    Work arrangement : ${String(nn?.work_arrangement ?? 'any')}`);
+console.log(`  Clear old data   : ${CLEAR_OLD ? `${YELLOW}YES — Jobs + AgentVerdicts will be deleted before scan${RESET}` : 'no'}`);
+
+// ── STEP 0: Clear old data (optional) ────────────────────────────────────────
+if (CLEAR_OLD) {
+    divider('STEP 0 — CLEARING OLD DATA');
+    console.log(`\n  Deleting existing Jobs and AgentVerdicts for user ${USER_ID}…\n`);
+
+    const clearDb = new DynamoDBWrapper();
+
+    // Fetch all jobs for this user, then delete each one along with its verdicts.
+    const existingJobs = await clearDb.query('Jobs', {
+        IndexName: 'user_id-index',
+        KeyConditionExpression: 'user_id = :u',
+        ExpressionAttributeValues: { ':u': USER_ID },
+    });
+
+    let deletedJobs = 0;
+    let deletedVerdicts = 0;
+
+    await Promise.all(existingJobs.map(async (job) => {
+        const jobId = job.job_id as string;
+
+        // Delete all AgentVerdicts for this job first.
+        const verdicts = await clearDb.query('AgentVerdicts', {
+            IndexName: 'job_id-user_id-index',
+            KeyConditionExpression: 'job_id = :j AND user_id = :u',
+            ExpressionAttributeValues: { ':j': jobId, ':u': USER_ID },
+        });
+        await Promise.all(verdicts.map(async (v) => {
+            await clearDb.delete('AgentVerdicts', { verdict_id: v.verdict_id as string });
+            deletedVerdicts++;
+        }));
+
+        await clearDb.delete('Jobs', { job_id: jobId });
+        deletedJobs++;
+    }));
+
+    console.log(`  ✓ Deleted ${BOLD}${deletedJobs}${RESET} job(s) and ${BOLD}${deletedVerdicts}${RESET} verdict(s)\n`);
+}
 
 // ── STEP 1A: MCF scan ─────────────────────────────────────────────────────────
 divider('STEP 1A — MCF SCAN (MyCareersFuture)');
@@ -322,17 +362,20 @@ const mcfJobs = await scanner.scan(USER_ID);
 
 const scanMs = Date.now() - startScan;
 console.log(`\n  ✓ MCF returned ${BOLD}${mcfJobs.length} job(s)${RESET} (${(scanMs / 1000).toFixed(1)}s)`);
-console.log(`  ✓ Saved to DynamoDB Jobs table\n`);
 
 if (mcfJobs.length === 0) {
     console.log(`  ${YELLOW}No jobs returned from MCF. Check that your target roles`);
     console.log(`  are set on the user record (role might be too specific).${RESET}\n`);
+} else {
+    console.log(`  ${GREEN}✓ DynamoDB [Jobs] — wrote ${mcfJobs.length} item(s)${RESET}`);
 }
+console.log('');
 
 for (let i = 0; i < mcfJobs.length; i++) {
     const j = mcfJobs[i]!;
     console.log(`  ${GRAY}${String(i + 1).padStart(2)}.${RESET} [MCF] ${j.role_title} — ${BOLD}${j.company}${RESET}`);
     console.log(`      ${GRAY}${salaryStr(j.salary_min, j.salary_max)} · ${j.employment_type} · ${j.work_arrangement} · ${j.mcf_listing_days}d old${RESET}`);
+    console.log(`      ${GRAY}DynamoDB job_id: ${j.job_id}${RESET}`);
 }
 
 // ── STEP 1B: Exa web job search ───────────────────────────────────────────────
@@ -474,6 +517,11 @@ for (let idx = 0; idx < survivors.length; idx++) {
         exa,
     });
 
+    console.log(`       ${GREEN}✓ DynamoDB [AgentVerdicts] — wrote verdict_id: ${persistResult.verdict_id}${RESET}`);
+    if (persistResult.agent_failures.length > 0) {
+        console.log(`       ${YELLOW}  agent_failures recorded: ${persistResult.agent_failures.join(', ')}${RESET}`);
+    }
+
     // Resolve master decision from the valid verdicts
     const degResult = resolveDegraded(persistResult.verdicts);
 
@@ -488,6 +536,9 @@ for (let idx = 0; idx < survivors.length; idx++) {
                 ExpressionAttributeValues: { ':md': degResult.decision },
             },
         );
+        console.log(`       ${GREEN}✓ DynamoDB [AgentVerdicts] — updated master_decision: ${degResult.decision.decision}${RESET}`);
+    } else {
+        console.log(`       ${YELLOW}⚠ DynamoDB [AgentVerdicts] — no master_decision written (no valid verdicts)${RESET}`);
     }
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
