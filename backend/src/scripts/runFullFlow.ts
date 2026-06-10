@@ -31,6 +31,10 @@ import {
     BedrockRuntimeClient,
     InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
+import {
+    SESClient,
+    SendEmailCommand,
+} from '@aws-sdk/client-ses';
 import type { BedrockInvoke, BedrockRequest, ExaClient } from '../debate/agents/shared.js';
 
 // ── Load .env.aws BEFORE any AWS SDK imports ─────────────────────────────────
@@ -388,6 +392,109 @@ if (escalated.length > 0) {
     }
 }
 
+// ── STEP 4: SES email digest ──────────────────────────────────────────────────
+divider('STEP 4 — EMAIL DIGEST (SES)');
+
+const SES_FROM = process.env.SES_FROM_EMAIL ?? '';
+const SES_TO = process.env.DIGEST_DEMO_RECIPIENT ?? SES_FROM;
+const SES_REGION_VAL = process.env.SES_REGION ?? REGION;
+
+if (!SES_FROM || !SES_TO) {
+    console.log(`\n  ${YELLOW}Skipped — set SES_FROM_EMAIL and DIGEST_DEMO_RECIPIENT in .env.aws to enable.${RESET}\n`);
+} else if (queued.length === 0) {
+    console.log(`\n  ${GRAY}No apply-equivalent jobs to report — skipping email.${RESET}\n`);
+} else {
+    const runDate = new Intl.DateTimeFormat('en-SG', {
+        timeZone: SGT_TIME_ZONE,
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).format(new Date());
+
+    const jobRows = queued.map((o, i) => {
+        const label = o.decision === 'apply_consensus' ? 'Consensus Apply' : 'Apply with Caveat';
+        const salary = salaryStr(o.job.salary_min, o.job.salary_max);
+        const url = o.job.source_url ? `\n     Apply: ${o.job.source_url}` : '';
+        const caveat = o.summaryText ? `\n     Note: ${o.summaryText}` : '';
+        return `${i + 1}. ${o.job.role_title} @ ${o.job.company}\n   ${salary} · ${label}${url}${caveat}`;
+    }).join('\n\n');
+
+    const textBody = [
+        `WorkSignal — Apply Digest`,
+        `${runDate}`,
+        ``,
+        `${queued.length} job(s) classified as Apply:`,
+        ``,
+        jobRows,
+        ``,
+        `──────────────────────────────────────────`,
+        `${survivors.length} debated · ${queued.length} apply · ${escalated.length} deadlock · ${outcomes.filter(o => o.decision === 'skip_consensus' || o.decision === 'veto_skip').length} skip`,
+        ``,
+        `View full dashboard: http://localhost:3000/dashboard`,
+    ].join('\n');
+
+    const htmlRows = queued.map((o, i) => {
+        const label = o.decision === 'apply_consensus'
+            ? '<span style="color:#16a34a;font-weight:bold">Consensus Apply</span>'
+            : '<span style="color:#ca8a04;font-weight:bold">Apply with Caveat</span>';
+        const salary = salaryStr(o.job.salary_min, o.job.salary_max);
+        const urlHtml = o.job.source_url
+            ? `<br><a href="${o.job.source_url}" style="color:#2563eb">View listing →</a>`
+            : '';
+        const caveatHtml = o.summaryText
+            ? `<br><span style="color:#6b7280;font-size:13px">${o.summaryText}</span>`
+            : '';
+        return `<tr style="border-bottom:1px solid #e5e7eb">
+          <td style="padding:12px 8px;font-weight:600">${i + 1}. ${o.job.role_title}</td>
+          <td style="padding:12px 8px">${o.job.company}</td>
+          <td style="padding:12px 8px;color:#6b7280">${salary}</td>
+          <td style="padding:12px 8px">${label}${caveatHtml}${urlHtml}</td>
+        </tr>`;
+    }).join('\n');
+
+    const htmlBody = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;max-width:700px;margin:0 auto;padding:24px">
+<h2 style="margin:0 0 4px">WorkSignal — Apply Digest</h2>
+<p style="color:#6b7280;margin:0 0 24px">${runDate}</p>
+<p><strong>${queued.length} job(s) ready to apply</strong></p>
+<table style="width:100%;border-collapse:collapse;font-size:14px">
+  <thead><tr style="background:#f3f4f6;text-align:left">
+    <th style="padding:8px">#&nbsp;Role</th>
+    <th style="padding:8px">Company</th>
+    <th style="padding:8px">Salary</th>
+    <th style="padding:8px">Verdict</th>
+  </tr></thead>
+  <tbody>${htmlRows}</tbody>
+</table>
+<p style="margin-top:24px;color:#6b7280;font-size:13px">
+  ${survivors.length} debated · ${queued.length} apply · ${escalated.length} deadlock ·
+  <a href="http://localhost:3000/dashboard">Open dashboard →</a>
+</p>
+</body></html>`;
+
+    try {
+        const ses = new SESClient({ region: SES_REGION_VAL });
+        await ses.send(new SendEmailCommand({
+            Source: SES_FROM,
+            Destination: { ToAddresses: [SES_TO] },
+            Message: {
+                Subject: { Data: `WorkSignal: ${queued.length} job(s) ready to apply — ${runDate}` },
+                Body: {
+                    Text: { Data: textBody, Charset: 'UTF-8' },
+                    Html: { Data: htmlBody, Charset: 'UTF-8' },
+                },
+            },
+        }));
+        console.log(`\n  ${GREEN}✓ Digest sent via SES${RESET}`);
+        console.log(`    From : ${SES_FROM}`);
+        console.log(`    To   : ${SES_TO}`);
+        console.log(`    Jobs : ${queued.length} apply-equivalent\n`);
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`\n  ${RED}✗ SES send failed: ${msg}${RESET}`);
+        console.log(`  ${GRAY}Check that ${SES_FROM} is verified in SES and your AWS credentials have ses:SendEmail permission.${RESET}\n`);
+    }
+}
+
 divider('COMPLETE');
 console.log(`\n  DynamoDB now has real Jobs + AgentVerdicts for ${USER_ID}.`);
-console.log(`  Visit http://localhost:3000/api/dashboard (sign in first) to see live data.\n`);
+console.log(`  Visit http://localhost:3000/dashboard (sign in first) to see live data.\n`);
