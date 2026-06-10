@@ -54,7 +54,9 @@ export async function POST(
         }
 
         // Build a send context and invoke the Application_Sender.
-        const { createApplicationSender } = await import('@worksignal/backend');
+        const { createApplicationSender } = await import(
+            '@worksignal/backend/src/applications/applicationSender.js'
+        );
         const sender = createApplicationSender({
             loadContext: async () => ({
                 user_id: user.userId,

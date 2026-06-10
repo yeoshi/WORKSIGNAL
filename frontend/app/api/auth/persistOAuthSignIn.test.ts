@@ -3,7 +3,7 @@ import { persistOAuthSignIn } from './persistOAuthSignIn';
 
 const mockOnCallback = vi.fn();
 
-vi.mock('@worksignal/backend', () => ({
+vi.mock('@worksignal/backend/src/auth/authService.js', () => ({
   createAuthService: () => ({ onCallback: mockOnCallback }),
   GMAIL_READONLY_SCOPE: 'https://www.googleapis.com/auth/gmail.readonly',
   USERS_TABLE: 'Users',

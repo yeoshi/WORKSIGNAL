@@ -29,7 +29,9 @@ export async function GET() {
 
     try {
         const { DynamoDBWrapper } = await import('@worksignal/shared');
-        const { createApplicationTracker } = await import('@worksignal/backend');
+        const { createApplicationTracker } = await import(
+            '@worksignal/backend/src/applications/applicationTracker.js'
+        );
 
         const db = new DynamoDBWrapper();
         const tracker = createApplicationTracker();

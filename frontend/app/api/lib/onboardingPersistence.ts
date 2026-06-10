@@ -32,7 +32,9 @@ export async function createOnboardingServiceForRequest() {
     return createLocalOnboardingService();
   }
 
-  const { createOnboardingService } = await import('@worksignal/backend');
+  const { createOnboardingService } = await import(
+    '@worksignal/backend/src/onboarding/onboardingService.js'
+  );
   const { DynamoDBWrapper } = await import('@worksignal/shared');
   return createOnboardingService({ db: new DynamoDBWrapper() });
 }

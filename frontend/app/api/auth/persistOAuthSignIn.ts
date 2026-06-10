@@ -8,7 +8,7 @@ import {
   GMAIL_READONLY_SCOPE,
   USERS_TABLE,
   type AuthUserRecord,
-} from '@worksignal/backend';
+} from '@worksignal/backend/src/auth/authService.js';
 import type { DynamoDBWrapper } from '@worksignal/shared';
 import {
   ensureLocalAuthUser,

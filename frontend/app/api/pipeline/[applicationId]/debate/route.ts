@@ -19,7 +19,9 @@ export async function GET(
 
     try {
         const { applicationId } = params;
-        const { createApplicationTracker } = await import('@worksignal/backend');
+        const { createApplicationTracker } = await import(
+            '@worksignal/backend/src/applications/applicationTracker.js'
+        );
         const tracker = createApplicationTracker();
 
         // Verify the application belongs to this user by checking the list.

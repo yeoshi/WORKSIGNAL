@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { uploadResume } = await import('@worksignal/backend');
+    const { uploadResume } = await import(
+      '@worksignal/backend/src/onboarding/resumeUpload.js'
+    );
     const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
 
     const bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
@@ -101,7 +103,9 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       try {
-        const { createResumeParser } = await import('@worksignal/backend');
+        const { createResumeParser } = await import(
+          '@worksignal/backend/src/onboarding/resumeParser.js'
+        );
         const { createBedrockTextInvoke } = await import('../../lib/bedrockTextInvoke');
         const parser = createResumeParser({
           s3,

@@ -68,7 +68,9 @@ export async function POST(request: NextRequest) {
       return Response.json({ ok: true, s3Key, sampleText });
     }
 
-    const { uploadResume } = await import('@worksignal/backend');
+    const { uploadResume } = await import(
+      '@worksignal/backend/src/onboarding/resumeUpload.js'
+    );
     const { S3Helper } = await import('@worksignal/shared');
 
     const s3 = new S3Helper({

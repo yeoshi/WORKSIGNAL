@@ -56,7 +56,9 @@ export async function GET(request: Request) {
         const [company, applicationCount] = targetCompany;
 
         // Try to build suggestions on-the-fly using the Network_Agent.
-        const { createNetworkAgent } = await import('@worksignal/backend');
+        const { createNetworkAgent } = await import(
+            '@worksignal/backend/src/network/networkAgent.js'
+        );
         const agent = createNetworkAgent({ db });
 
         try {

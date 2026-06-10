@@ -106,18 +106,29 @@ async function runPipeline(
 
     // Lazy imports — AWS SDK needs env vars set before use.
     const { DynamoDBWrapper } = await import('@worksignal/shared');
-    const {
-        createOpportunityScanner,
-        preFilter,
-        runAmbitionAgent,
-        runRealismAgent,
-        runRiskAgent,
-        runOpportunityAgent,
-        persistAgentVerdicts,
-        hasAnyValidVerdict,
-        resolveEnriched,
-        isInvalidVerdict,
-    } = await import('@worksignal/backend');
+    const [
+        { createOpportunityScanner },
+        { preFilter },
+        { runAmbitionAgent },
+        { runRealismAgent },
+        { runRiskAgent },
+        { runOpportunityAgent },
+        { persistAgentVerdicts },
+        { hasAnyValidVerdict },
+        { resolveEnriched },
+        { isInvalidVerdict },
+    ] = await Promise.all([
+        import('@worksignal/backend/src/discovery/opportunityScanner.js'),
+        import('@worksignal/backend/src/preFilter/preFilter.js'),
+        import('@worksignal/backend/src/debate/agents/ambition.js'),
+        import('@worksignal/backend/src/debate/agents/realism.js'),
+        import('@worksignal/backend/src/debate/agents/risk.js'),
+        import('@worksignal/backend/src/debate/agents/opportunity.js'),
+        import('@worksignal/backend/src/debate/verdictPersistence.js'),
+        import('@worksignal/backend/src/orchestrator/degradedResolution.js'),
+        import('@worksignal/backend/src/orchestrator/resolveEnriched.js'),
+        import('@worksignal/backend/src/debate/verdictValidator.js'),
+    ]);
     const { generateAndPersistJobMaterials, shouldGenerateJobMaterials } = await import('../../lib/jobMaterialsGeneration');
     const { serializeUserProfileFromRecord } = await import('../../lib/serializeUserProfile');
 
