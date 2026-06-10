@@ -46,6 +46,7 @@ export function TopBar() {
                 >
                   Profile
                 </Link>
+                <div className="my-1 border-t border-ws-line" />
                 <button
                   type="button"
                   className="block w-full px-4 py-2 text-left text-sm text-ws-ink hover:bg-ws-paper"

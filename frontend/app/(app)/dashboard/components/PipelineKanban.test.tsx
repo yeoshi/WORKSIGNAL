@@ -48,6 +48,7 @@ function makeActionItem(overrides?: Partial<ActionNeededItem>): ActionNeededItem
 }
 
 const noop = async () => {};
+const noopSync = () => {};
 
 describe('PipelineKanban', () => {
   it('renders Needs Your Decision as the first column', () => {
@@ -56,6 +57,7 @@ describe('PipelineKanban', () => {
         applications={[makeApplication()]}
         actionNeeded={[makeActionItem()]}
         onOpenJob={() => {}}
+        onApply={noopSync}
         onSend={noop}
         onSkip={noop}
         onSave={noop}
@@ -64,7 +66,7 @@ describe('PipelineKanban', () => {
     );
 
     const columns = screen.getAllByTestId(/kanban-column-/);
-    expect(columns[0].getAttribute('data-testid')).toBe(
+    expect(columns[0]?.getAttribute('data-testid')).toBe(
       'kanban-column-needs_decision',
     );
   });
@@ -75,6 +77,7 @@ describe('PipelineKanban', () => {
         applications={[makeApplication()]}
         actionNeeded={[makeActionItem()]}
         onOpenJob={() => {}}
+        onApply={noopSync}
         onSend={noop}
         onSkip={noop}
         onSave={noop}
@@ -94,6 +97,7 @@ describe('PipelineKanban', () => {
         applications={[]}
         actionNeeded={[makeActionItem()]}
         onOpenJob={onOpenJob}
+        onApply={noopSync}
         onSend={noop}
         onSkip={noop}
         onSave={noop}
@@ -112,6 +116,7 @@ describe('PipelineKanban', () => {
         applications={[makeApplication({ job_id: 'job-001' })]}
         actionNeeded={[]}
         onOpenJob={onOpenJob}
+        onApply={noopSync}
         onSend={noop}
         onSkip={noop}
         onSave={noop}

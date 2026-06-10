@@ -17,6 +17,9 @@ export interface ApplicationMaterialsProps {
   originalCoverLetter: string;
   editable: boolean;
   disabled?: boolean;
+  onRegenerate?: () => void;
+  isDraftingCoverLetter?: boolean;
+  onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
 }
 
 export function ApplicationMaterials({
@@ -31,6 +34,9 @@ export function ApplicationMaterials({
   originalCoverLetter,
   editable,
   disabled = false,
+  onRegenerate,
+  isDraftingCoverLetter = false,
+  onCustomResumeUploaded,
 }: ApplicationMaterialsProps) {
   const [usingOriginalResume, setUsingOriginalResume] = useState(false);
 
@@ -59,13 +65,17 @@ export function ApplicationMaterials({
         canUseOriginalResume={canUseOriginalResume}
         onUseOriginalResume={() => setUsingOriginalResume(true)}
         onUseCustomisedResume={() => setUsingOriginalResume(false)}
+        jobId={job.job_id}
+        onCustomResumeUploaded={onCustomResumeUploaded}
       />
       <CoverLetterEditor
-        value={coverLetter}
+        value={isDraftingCoverLetter ? '' : coverLetter}
         onChange={onCoverLetterChange}
         decision={decision}
         disabled={disabled}
         originalValue={originalCoverLetter}
+        onRegenerate={onRegenerate}
+        isLoading={isDraftingCoverLetter}
         editable={editable}
         company={job.company}
         roleTitle={job.role_title}

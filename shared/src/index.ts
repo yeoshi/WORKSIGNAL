@@ -12,8 +12,8 @@
 /** Marker constant confirming the shared package is wired up. */
 export const WORKSIGNAL_SHARED_VERSION = '0.1.0';
 
-/** AWS region all WORKSIGNAL infrastructure targets. */
-export const AWS_REGION = 'ap-southeast-1' as const;
+/** AWS region all WORKSIGNAL infrastructure targets — reads from env, falls back to us-west-2. */
+export const AWS_REGION = process.env.AWS_DEFAULT_REGION ?? 'us-west-2';
 
 // Shared TypeScript types and service interfaces (design contracts, task 1.2).
 export * from './types/index.js';

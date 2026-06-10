@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           scope:
-            'openid email profile https://www.googleapis.com/auth/gmail.readonly',
+            'openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
           access_type: 'offline',
           prompt: 'consent',
         },
@@ -62,6 +62,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string }).id = token.sub;
+        // Expose access token so API routes can call Gmail API on behalf of the user.
+        (session.user as { accessToken?: string }).accessToken = token.accessToken as string | undefined;
       }
       return session;
     },

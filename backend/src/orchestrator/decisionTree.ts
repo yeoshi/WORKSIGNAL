@@ -249,8 +249,9 @@ export function resolveDecision(verdicts: VerdictSet): MasterDecision {
     summary: '',
     agents_for: forAgents,
     agents_against: againstAgents,
-    // Realism-floor confirmation is layered in task 5.6 (Req 12.6).
-    user_action_required: false,
+    // deadlock_escalate always requires the user to break the tie.
+    // Realism-floor confirmation (Req 12.6) may set this to true for apply decisions too.
+    user_action_required: decision === 'deadlock_escalate',
   };
 
   // Record the dissenting agent's concern only for apply_with_caveat (Req 12.3).

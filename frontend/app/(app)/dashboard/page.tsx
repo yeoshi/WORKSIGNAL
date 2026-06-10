@@ -10,7 +10,10 @@ import { NetworkModal } from './components/NetworkModal';
 import { BriefModal } from './components/BriefModal';
 import { IssuesModal } from './components/IssuesModal';
 import { JobDetailModal } from './components/JobDetailModal';
+import { AgentRunModal } from './components/AgentRunModal';
+import { CoverLetterModal } from './components/CoverLetterModal';
 import { useDashboardData } from './useDashboardData';
+import { useAgentRun } from './hooks/useAgentRun';
 import { usePipeline } from '../pipeline/hooks/usePipeline';
 import { useKanbanActions } from './hooks/useKanbanActions';
 import { Metric } from '../../components/ui/Metric';
@@ -34,8 +37,16 @@ export default function DashboardPage() {
   const [networkOpen, setNetworkOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
   const [issuesOpen, setIssuesOpen] = useState(false);
+  const [agentRunOpen, setAgentRunOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobShowActions, setSelectedJobShowActions] = useState(false);
+  const [applyJobId, setApplyJobId] = useState<string | null>(null);
+
+  const agentRun = useAgentRun(reload);
+
+  const handleApply = useCallback((jobId: string) => {
+    setApplyJobId(jobId);
+  }, []);
 
   const actionNeeded = data?.action_needed ?? [];
 
@@ -108,6 +119,8 @@ export default function DashboardPage() {
             agentStatus={data.agent_status}
             issueCount={issueCount}
             onOpenIssues={() => setIssuesOpen(true)}
+            onRunAgent={() => { setAgentRunOpen(true); agentRun.start(); }}
+            agentRunning={agentRun.state === 'running'}
           />
 
           <div className="grid min-w-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,26%)] lg:gap-5">
@@ -128,7 +141,7 @@ export default function DashboardPage() {
                   bordered
                   label="Callback Rate"
                   value={
-                    callbackRate === null
+                    callbackRate == null
                       ? '—'
                       : `${Math.round(callbackRate * 100)}%`
                   }
@@ -148,6 +161,7 @@ export default function DashboardPage() {
                 actionNeeded={data.action_needed}
                 isLoading={pipelineLoading}
                 onOpenJob={handleOpenJob}
+                onApply={handleApply}
                 onSend={send}
                 onSkip={skip}
                 onSave={save}
@@ -199,6 +213,30 @@ export default function DashboardPage() {
         onSkipJob={selectedJobShowActions ? handleModalSkip : undefined}
         onSendJob={selectedJobShowActions ? handleModalSend : undefined}
       />
+      <AgentRunModal
+        open={agentRunOpen}
+        state={agentRun.state}
+        events={agentRun.events}
+        onClose={() => { setAgentRunOpen(false); agentRun.reset(); }}
+      />
+      {(() => {
+        const applyItem = actionNeeded.find((i) => i.job_id === applyJobId);
+        return (
+          <CoverLetterModal
+            open={applyJobId !== null}
+            jobId={applyJobId}
+            jobTitle={applyItem?.role_title ?? ''}
+            company={applyItem?.company ?? ''}
+            hasEmployerEmail={applyItem?.has_employer_email ?? false}
+            sourceUrl={applyItem?.source_url ?? null}
+            onClose={() => setApplyJobId(null)}
+            onSent={(jobId) => {
+              markSent(jobId);
+              setApplyJobId(null);
+            }}
+          />
+        );
+      })()}
     </main>
   );
 }

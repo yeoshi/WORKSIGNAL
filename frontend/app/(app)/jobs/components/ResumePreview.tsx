@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef, useState } from 'react';
+import { Upload, Loader2 } from 'lucide-react';
 import type { Materials, MasterDecision } from '@worksignal/shared';
 import { resumeFileName } from '../lib/resumeFileName';
 
@@ -16,6 +18,10 @@ export interface ResumePreviewProps {
   canUseOriginalResume?: boolean;
   onUseOriginalResume?: () => void;
   onUseCustomisedResume?: () => void;
+  /** Job ID — enables per-job custom resume upload when provided. */
+  jobId?: string | null;
+  /** Called after a custom resume is successfully uploaded. */
+  onCustomResumeUploaded?: (s3Key: string, resumeUrl: string) => void;
 }
 
 export function ResumePreview({
@@ -29,8 +35,38 @@ export function ResumePreview({
   canUseOriginalResume = false,
   onUseOriginalResume,
   onUseCustomisedResume,
+  jobId,
+  onCustomResumeUploaded,
 }: ResumePreviewProps) {
   const fileName = resumeFileName(resumeS3Key);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !jobId) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    const form = new FormData();
+    form.append('resume', file);
+
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/resume`, { method: 'POST', body: form });
+      const data = (await res.json()) as { ok?: boolean; s3Key?: string; resumeUrl?: string; message?: string };
+
+      if (!res.ok || !data.ok) throw new Error(data.message ?? 'Upload failed');
+
+      onCustomResumeUploaded?.(data.s3Key ?? '', data.resumeUrl ?? '');
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
   const showCustomisedBadge =
     materials.customisation_applied && !usingOriginalResume;
 
@@ -62,10 +98,16 @@ export function ResumePreview({
         ) : null}
       </div>
 
+      {resumeS3Key ? (
+        <p className="mt-2 truncate text-xs text-gray-400" title={fileName}>
+          {fileName}
+        </p>
+      ) : null}
+
       {!compact && decision.resume_instructions && !usingOriginalResume ? (
         <p
           data-testid="resume-instructions"
-          className="mt-2 line-clamp-2 text-xs leading-relaxed text-gray-600"
+          className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-600"
         >
           {decision.resume_instructions}
         </p>
@@ -114,6 +156,44 @@ export function ResumePreview({
               Use original resume
             </button>
           )
+        ) : null}
+
+        {/* Per-job custom resume upload */}
+        {editable && jobId ? (
+          <>
+            <input
+              ref={fileInputRef}
+              id={`resume-upload-${jobId}`}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="sr-only"
+              onChange={(e) => void handleUpload(e)}
+            />
+            <label
+              htmlFor={`resume-upload-${jobId}`}
+              className={[
+                'inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
+                uploading
+                  ? 'cursor-not-allowed text-gray-400'
+                  : 'text-indigo-600 hover:bg-indigo-50',
+              ].join(' ')}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" aria-hidden />
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  <Upload size={14} aria-hidden />
+                  Upload custom resume
+                </>
+              )}
+            </label>
+            {uploadError ? (
+              <p className="text-center text-xs text-red-500">{uploadError}</p>
+            ) : null}
+          </>
         ) : null}
       </div>
     </section>

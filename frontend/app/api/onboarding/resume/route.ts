@@ -2,6 +2,7 @@
  * POST /api/onboarding/resume — Upload resume PDF (Req 2.1, 2.3).
  */
 
+import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import type { ParsedProfile } from '@worksignal/shared';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
@@ -15,6 +16,10 @@ import { parseResumePdfLocally } from '../../lib/localResumeParser';
 const LOCAL_RESUME_PREFIX = 'local/resumes';
 
 export const runtime = 'nodejs';
+
+function safeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_') || 'resume.pdf';
+}
 
 export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -54,18 +59,40 @@ export async function POST(request: NextRequest) {
     }
 
     const { uploadResume } = await import('@worksignal/backend');
-    const { S3Helper } = await import('@worksignal/shared');
+    const { DynamoDBWrapper, S3Helper } = await import('@worksignal/shared');
 
+    const bucket = process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents';
     const buffer = Buffer.from(await file.arrayBuffer());
     const s3 = new S3Helper({
-      bucket: process.env.WORKSIGNAL_S3_BUCKET ?? 'worksignal-documents',
+      bucket,
       region: process.env.WORKSIGNAL_S3_REGION ?? 'ap-southeast-1',
     });
 
     const result = await uploadResume(
-      { s3 },
+      {
+        s3,
+        generateKey: (uid, f) =>
+          `resumes/${uid}/${randomUUID()}/${safeFilename(f.filename)}`,
+      },
       user.userId,
       { bytes: new Uint8Array(buffer), filename: file.name, contentType: 'application/pdf' },
+    );
+
+    console.log(
+      `[resume-upload] ✓ uploaded to s3://${bucket}/${result.s3Key} (user=${user.userId}, file=${file.name}, size=${buffer.byteLength}B)`,
+    );
+
+    const db = new DynamoDBWrapper();
+    await db.update('Users', { user_id: user.userId }, {
+      UpdateExpression: 'SET resume_s3_key = :key, updated_at = :ts',
+      ExpressionAttributeValues: {
+        ':key': result.s3Key,
+        ':ts': new Date().toISOString(),
+      },
+    });
+
+    console.log(
+      `[resume-upload] ✓ persisted resume_s3_key to Users table (user=${user.userId})`,
     );
 
     let profile: ParsedProfile | null = null;

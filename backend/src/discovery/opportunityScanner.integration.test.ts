@@ -4,8 +4,8 @@
  * Exercises the scanner end-to-end against an in-memory fake DynamoDB and
  * injected MCF / Exa seams (no network, no AWS), covering:
  *
- *   (1) 3-hour gate (Req 7.1) — the scan is a no-op when fewer than three hours
- *       have elapsed since `last_scan_at`, and runs when ≥3h have elapsed or the
+ *   (1) Daily gate (Req 7.1) — the scan is a no-op when fewer than 24 hours
+ *       have elapsed since `last_scan_at`, and runs when ≥24h have elapsed or the
  *       user has never been scanned.
  *   (2) MCF success path (Req 7.1/7.2/7.3) — mocked `mcfSearch` results are
  *       mapped and persisted to the Jobs table with company / role / salary /
@@ -266,10 +266,10 @@ function sampleMcfJob(): RawMcfJob {
 }
 
 /* ------------------------------------------------------------------ *
- * (1) 3-hour gate (Req 7.1)
+ * (1) Daily gate (Req 7.1)
  * ------------------------------------------------------------------ */
 
-describe('Opportunity_Scanner integration — 3-hour gate (Req 7.1)', () => {
+describe('Opportunity_Scanner integration — daily gate (Req 7.1)', () => {
   let db: FakeDynamoDBWrapper;
   let mcfCalls: number;
   const mcfSearch: McfSearchFn = async () => {
@@ -282,9 +282,9 @@ describe('Opportunity_Scanner integration — 3-hour gate (Req 7.1)', () => {
     mcfCalls = 0;
   });
 
-  it('no-ops when fewer than three hours have elapsed since last_scan_at', async () => {
-    const twoHoursAgo = new Date(FIXED_NOW.getTime() - 2 * 60 * 60 * 1000);
-    db.seed(USERS_TABLE, makeUser({ last_scan_at: twoHoursAgo.toISOString() }) as unknown as DynamoItem);
+  it('no-ops when fewer than 24 hours have elapsed since last_scan_at', async () => {
+    const twelveHoursAgo = new Date(FIXED_NOW.getTime() - 12 * 60 * 60 * 1000);
+    db.seed(USERS_TABLE, makeUser({ last_scan_at: twelveHoursAgo.toISOString() }) as unknown as DynamoItem);
 
     const scanner = createOpportunityScanner({
       db,
@@ -301,12 +301,12 @@ describe('Opportunity_Scanner integration — 3-hour gate (Req 7.1)', () => {
     expect(db.all(JOBS_TABLE)).toHaveLength(0);
     // last_scan_at must be left untouched.
     const user = await db.get<UserConfig & DynamoItem>(USERS_TABLE, { user_id: USER_ID });
-    expect(user?.last_scan_at).toBe(twoHoursAgo.toISOString());
+    expect(user?.last_scan_at).toBe(twelveHoursAgo.toISOString());
   });
 
-  it('runs when exactly three hours have elapsed since last_scan_at', async () => {
-    const threeHoursAgo = new Date(FIXED_NOW.getTime() - SCAN_INTERVAL_MS);
-    db.seed(USERS_TABLE, makeUser({ last_scan_at: threeHoursAgo.toISOString() }) as unknown as DynamoItem);
+  it('runs when exactly 24 hours have elapsed since last_scan_at', async () => {
+    const oneDayAgo = new Date(FIXED_NOW.getTime() - SCAN_INTERVAL_MS);
+    db.seed(USERS_TABLE, makeUser({ last_scan_at: oneDayAgo.toISOString() }) as unknown as DynamoItem);
 
     const scanner = createOpportunityScanner({
       db,

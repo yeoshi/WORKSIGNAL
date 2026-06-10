@@ -7,8 +7,8 @@ describe('shared package', () => {
     expect(WORKSIGNAL_SHARED_VERSION).toBe('0.1.0');
   });
 
-  it('targets ap-southeast-1', () => {
-    expect(AWS_REGION).toBe('ap-southeast-1');
+  it('targets the configured AWS region', () => {
+    expect(AWS_REGION).toBe(process.env.AWS_DEFAULT_REGION ?? 'us-west-2');
   });
 
   // Smoke test confirming the property-based testing harness (fast-check)

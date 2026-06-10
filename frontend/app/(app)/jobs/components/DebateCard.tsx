@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { formatAgentSpeech } from '../lib/formatAgentSpeech';
 import type { AgentCardData } from './agentTheme';
@@ -13,10 +17,23 @@ function prettyVerdict(verdict: string): string {
     .join(' ');
 }
 
+function toSecondPerson(text: string): string {
+  return text
+    .replace(/\bThe user's\b/gi, 'Your')
+    .replace(/\bthe user's\b/gi, 'your')
+    .replace(/\bUser's\b/g, 'Your')
+    .trim();
+}
+
 export function DebateCard({ card }: DebateCardProps) {
-  const speech = formatAgentSpeech({
+  const [expanded, setExpanded] = useState(false);
+
+  const tldr = card.keyArgument.trim()
+    ? toSecondPerson(card.keyArgument.trim())
+    : null;
+
+  const fullSpeech = formatAgentSpeech({
     reasoning: card.reasoning,
-    keyArgument: card.keyArgument,
   });
 
   return (
@@ -60,29 +77,69 @@ export function DebateCard({ card }: DebateCardProps) {
         </div>
       ) : null}
 
-      <blockquote
-        data-testid={`debate-card-${card.agent}-speech`}
-        className="mt-4 border-l-2 pl-3 text-sm italic leading-relaxed text-gray-700"
-        style={{ borderLeftColor: card.color }}
-      >
-        &ldquo;{speech}&rdquo;
-      </blockquote>
+      {/* TLDR — bold summary shown first */}
+      {tldr ? (
+        <p
+          data-testid={`debate-card-${card.agent}-tldr`}
+          className="mt-4 border-l-2 pl-3 text-sm font-semibold leading-snug text-gray-900"
+          style={{ borderLeftColor: card.color }}
+        >
+          {tldr}
+        </p>
+      ) : null}
 
-      {card.details.length > 0 ? (
-        <dl className="mt-4 space-y-2 text-sm">
-          {card.details.map((detail) => (
-            <div key={detail.label}>
-              <dt className="font-medium text-gray-700">{detail.label}</dt>
-              <dd className="mt-0.5">
-                <ul className="list-disc pl-5 text-gray-600">
-                  {detail.values.map((value, i) => (
-                    <li key={`${detail.label}-${i}`}>{value}</li>
+      {/* Full reasoning — collapsible */}
+      {card.reasoning.trim() ? (
+        <div className="mt-2">
+          <button
+            type="button"
+            data-testid={`debate-card-${card.agent}-toggle`}
+            onClick={() => setExpanded((v) => !v)}
+            className="flex items-center gap-1 text-xs font-medium text-gray-400 transition hover:text-gray-700"
+            aria-expanded={expanded}
+          >
+            {expanded ? (
+              <>
+                <ChevronUp size={13} aria-hidden />
+                Hide reasoning
+              </>
+            ) : (
+              <>
+                <ChevronDown size={13} aria-hidden />
+                Full reasoning
+              </>
+            )}
+          </button>
+
+          {expanded ? (
+            <>
+              <blockquote
+                data-testid={`debate-card-${card.agent}-speech`}
+                className="mt-2 border-l-2 pl-3 text-sm italic leading-relaxed text-gray-600"
+                style={{ borderLeftColor: card.color }}
+              >
+                &ldquo;{fullSpeech}&rdquo;
+              </blockquote>
+
+              {card.details.length > 0 ? (
+                <dl className="mt-4 space-y-2 text-sm">
+                  {card.details.map((detail) => (
+                    <div key={detail.label}>
+                      <dt className="font-medium text-gray-700">{detail.label}</dt>
+                      <dd className="mt-0.5">
+                        <ul className="list-disc pl-5 text-gray-600">
+                          {detail.values.map((value, i) => (
+                            <li key={`${detail.label}-${i}`}>{value}</li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
                   ))}
-                </ul>
-              </dd>
-            </div>
-          ))}
-        </dl>
+                </dl>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       ) : null}
     </article>
   );
