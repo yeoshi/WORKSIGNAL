@@ -5,6 +5,7 @@ import { SummaryMetrics } from './SummaryMetrics';
 import { AgentAccuracyDisplay } from './AgentAccuracyDisplay';
 import { ThresholdAdjustments } from './ThresholdAdjustments';
 import { BriefSummary } from './BriefSummary';
+import { RecalibrationInsight } from './RecalibrationInsight';
 import { fetchBriefOnce, type WeeklyBrief } from '../lib/fetchBrief';
 import { formatWeekOf } from '../../../lib/formatDate';
 
@@ -30,15 +31,18 @@ function formatBriefIntro(callbackRate: number): string {
 export function BriefView({
   showHeader = true,
   showIntro = false,
+  refreshSignal = 0,
 }: {
   showHeader?: boolean;
   showIntro?: boolean;
+  refreshSignal?: number;
 }) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
+    setState({ status: 'loading' });
 
     fetchBriefOnce(controller.signal)
       .then((data) => {
@@ -56,7 +60,7 @@ export function BriefView({
       active = false;
       controller.abort();
     };
-  }, []);
+  }, [refreshSignal]);
 
   if (state.status === 'loading') {
     return (
@@ -125,6 +129,11 @@ export function BriefView({
         agentPerformance={state.data.agent_performance}
         growthActivities={state.data.growth_activities}
         networkActivities={state.data.network_activities}
+      />
+      <RecalibrationInsight
+        scoreAverages={state.data.agent_score_averages}
+        skillsGap={state.data.skills_gap_summary}
+        applicationCount={state.data.metrics.applications_sent}
       />
       <ThresholdAdjustments adjustments={state.data.adjustments_made} />
       {state.data.brief_text && <BriefSummary briefText={state.data.brief_text} />}

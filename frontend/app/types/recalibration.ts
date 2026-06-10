@@ -31,6 +31,20 @@ export interface RecalibrationAdjustment {
   reason: string;
 }
 
+/** Average agent scores across all applications evaluated this week. */
+export interface AgentScoreAverages {
+  ambition: number;
+  realism: number;
+  risk: number;
+  opportunity: number;
+}
+
+/** Skill flagged in JDs where Ambition said yes but Realism said no. */
+export interface SkillGapSummaryItem {
+  skill: string;
+  flagged_count: number;
+}
+
 /**
  * A single weekly recalibration record (RecalibrationLog table, Req 21.4).
  */
@@ -42,6 +56,10 @@ export interface RecalibrationLogEntry {
   metrics: RecalibrationMetrics;
   agent_performance: Record<AgentName, AgentAccuracy>;
   adjustments_made: RecalibrationAdjustment[];
+  /** Average score per agent across all applications this week. */
+  agent_score_averages?: AgentScoreAverages;
+  /** Skills flagged in stretch-role JDs (high ambition, low realism). */
+  skills_gap_summary?: SkillGapSummaryItem[];
   /** True for a zero-callback emergency recalibration (Req 21.6). */
   emergency: boolean;
   brief_text: string;

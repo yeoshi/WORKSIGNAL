@@ -229,6 +229,80 @@ const VERDICTS = [
 for (const v of VERDICTS) await seed('AgentVerdicts', v);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Additional jobs — high ambition score, low realism score pattern
+// These show the Ambition Agent over-recommending stretch roles
+console.log('\n── Additional Jobs (high ambition / low realism) ──────────────');
+const EXTRA_JOBS = [
+    { job_id: 'seed-job-004', company: 'Shopee', role_title: 'Senior Data Scientist', salary_min: 8000, salary_max: 12000, jd_text: 'Lead ML research for Shopee recommendations. Requires 5+ years ML research, deep PyTorch expertise, publication track record.', days_ago: 4 },
+    { job_id: 'seed-job-005', company: 'GoTo', role_title: 'Platform Engineer', salary_min: 9000, salary_max: 13000, jd_text: 'Build distributed data platform. Strong Golang, Kafka, and Kubernetes required. 4+ years backend experience.', days_ago: 3 },
+    { job_id: 'seed-job-006', company: 'Stripe', role_title: 'Senior Data Engineer', salary_min: 10000, salary_max: 15000, jd_text: 'Design fault-tolerant pipelines at Stripe scale. Scala, Spark, distributed systems, 4+ years required.', days_ago: 5 },
+    { job_id: 'seed-job-007', company: 'Lazada', role_title: 'ML Engineer', salary_min: 7000, salary_max: 10000, jd_text: 'Deploy ML models to production. Kubernetes, Docker, MLflow, AWS SageMaker, 3+ years MLOps required.', days_ago: 2 },
+    { job_id: 'seed-job-008', company: 'DBS Bank', role_title: 'Lead Data Scientist', salary_min: 8500, salary_max: 12000, jd_text: 'Lead model governance for credit risk models. 5+ years finance ML, model risk frameworks, Python and R.', days_ago: 6 },
+    { job_id: 'seed-job-009', company: 'OCBC', role_title: 'Analytics Engineer', salary_min: 6500, salary_max: 9000, jd_text: 'Build data warehouse on Snowflake. dbt, data modelling, 3+ years data engineering experience.', days_ago: 4 },
+    { job_id: 'seed-job-010', company: 'Singtel', role_title: 'AI Platform Engineer', salary_min: 7500, salary_max: 11000, jd_text: 'Build GPU training infrastructure. PyTorch, CUDA, Kubernetes, production ML systems at scale.', days_ago: 3 },
+    { job_id: 'seed-job-011', company: 'Carousell', role_title: 'Senior Data Engineer', salary_min: 7000, salary_max: 10000, jd_text: 'Build real-time data pipelines. Apache Kafka, Flink, Spark Streaming, 4+ years experience required.', days_ago: 5 },
+    { job_id: 'seed-job-012', company: 'Foodpanda', role_title: 'Data Scientist', salary_min: 6000, salary_max: 9000, jd_text: 'Run causal inference and experimentation for delivery optimisation. A/B testing, R, Bayesian methods, 3+ years.', days_ago: 2 },
+    { job_id: 'seed-job-013', company: 'Nium', role_title: 'Data Engineer', salary_min: 6500, salary_max: 9500, jd_text: 'Build data infrastructure on AWS. Terraform, Airflow at scale, Redshift, 3+ years cloud data engineering.', days_ago: 4 },
+];
+for (const j of EXTRA_JOBS) {
+    await seed('Jobs', {
+        job_id: j.job_id,
+        user_id: USER_ID,
+        company: j.company,
+        role_title: j.role_title,
+        salary_min: j.salary_min,
+        salary_max: j.salary_max,
+        jd_text: j.jd_text,
+        posted_at: new Date(Date.now() - j.days_ago * 24 * 60 * 60 * 1000).toISOString(),
+        source_url: `https://www.mycareersfuture.gov.sg/job/${j.role_title.toLowerCase().replace(/\s+/g, '-')}-${j.company.toLowerCase()}`,
+        employer_email: null,
+        employment_type: 'full_time',
+        work_arrangement: 'hybrid_remote',
+        location: 'Singapore',
+        ep_sponsorship_signal: false,
+        mcf_listing_days: j.days_ago,
+        scanned_at: NOW,
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Verdicts for extra jobs — high ambition (78-90), low realism (45-62)
+console.log('\n── AgentVerdicts (stretch-role pattern) ───────────────────────');
+const EXTRA_VERDICTS = [
+    { job: 'seed-job-004', vid: 'seed-verdict-004', aScore: 88, rScore: 52, gaps: ['PyTorch / Deep Learning', 'ML Research', 'AWS Cloud Architecture'] },
+    { job: 'seed-job-005', vid: 'seed-verdict-005', aScore: 84, rScore: 45, gaps: ['Distributed Systems', 'Golang', 'Apache Kafka / Streaming'] },
+    { job: 'seed-job-006', vid: 'seed-verdict-006', aScore: 90, rScore: 48, gaps: ['Distributed Systems', 'Scala', 'AWS Cloud Architecture'] },
+    { job: 'seed-job-007', vid: 'seed-verdict-007', aScore: 82, rScore: 55, gaps: ['Kubernetes & Docker', 'Production ML / MLOps', 'AWS Cloud Architecture'] },
+    { job: 'seed-job-008', vid: 'seed-verdict-008', aScore: 78, rScore: 58, gaps: ['Finance Domain ML', 'Model Governance', 'Production ML / MLOps'] },
+    { job: 'seed-job-009', vid: 'seed-verdict-009', aScore: 76, rScore: 60, gaps: ['Data Warehouse / dbt', 'Snowflake', 'AWS Cloud Architecture'] },
+    { job: 'seed-job-010', vid: 'seed-verdict-010', aScore: 80, rScore: 50, gaps: ['PyTorch / Deep Learning', 'Kubernetes & Docker', 'Production ML / MLOps'] },
+    { job: 'seed-job-011', vid: 'seed-verdict-011', aScore: 85, rScore: 62, gaps: ['Apache Kafka / Streaming', 'Kubernetes & Docker', 'AWS Cloud Architecture'] },
+    { job: 'seed-job-012', vid: 'seed-verdict-012', aScore: 79, rScore: 58, gaps: ['Causal Inference / A/B Testing', 'Production ML / MLOps'] },
+    { job: 'seed-job-013', vid: 'seed-verdict-013', aScore: 83, rScore: 54, gaps: ['AWS Cloud Architecture', 'Terraform / IaC', 'Production ML / MLOps'] },
+];
+for (const v of EXTRA_VERDICTS) {
+    await seed('AgentVerdicts', {
+        verdict_id: v.vid,
+        job_id: v.job,
+        user_id: USER_ID,
+        ambition: { verdict: 'apply', score: v.aScore, ambition_score: v.aScore, reasoning: 'High-growth company with strong brand value.', key_argument: 'Career ceiling boost.' },
+        realism: { verdict: 'skip', score: v.rScore, match_score: v.rScore, reasoning: 'Profile gaps are too wide to expect a callback.', key_argument: 'Missing key requirements.', key_gaps: v.gaps, gaps: v.gaps, wlb_flags: [] },
+        risk: { verdict: 'safe', score: 25, risk_score: 25, reasoning: 'Established company, no red flags.', key_argument: 'Stable employer.', red_flags: [], glassdoor_score: 3.8 },
+        opportunity: { verdict: 'act_now', score: 72, urgency_score: 72, reasoning: 'Recent posting, competitive window.', key_argument: 'Apply early.', timing_factors: ['Recent posting'] },
+        master_decision: {
+            decision: 'apply_with_caveat',
+            summary: 'Ambition Agent recommends applying; Realism flags significant gaps. Profile stretch likely.',
+            agents_for: ['ambition', 'opportunity'],
+            agents_against: ['realism'],
+            dissent_note: `Realism Agent: gaps in ${v.gaps.slice(0, 2).join(', ')} reduce callback probability.`,
+            user_action_required: false,
+        },
+        agent_failures: [],
+        created_at: NOW,
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('\n── Applications ───────────────────────────────────────────────');
 // Only job-001 and job-002 have applications. job-003 intentionally has none
 // so it appears in the action_needed join.
@@ -272,6 +346,30 @@ const APPLICATIONS = [
         classification_confidence: 91,
     },
 ];
+// Applications for extra stretch-role jobs (all sent, no callback)
+for (let i = 0; i < EXTRA_VERDICTS.length; i++) {
+    const v = EXTRA_VERDICTS[i]!;
+    const job = EXTRA_JOBS[i]!;
+    APPLICATIONS.push({
+        application_id: `seed-app-${String(i + 3).padStart(3, '0')}`,
+        user_id: USER_ID,
+        job_id: v.job,
+        verdict_id: v.vid,
+        company: job.company,
+        role_title: job.role_title,
+        customised_resume_s3_key: null,
+        customisation_applied: false,
+        cover_letter_text: `Dear Hiring Manager, I am applying for the ${job.role_title} role at ${job.company}...`,
+        sent_at: new Date(Date.now() - (job.days_ago + 1) * 24 * 60 * 60 * 1000).toISOString(),
+        recipient_email: null,
+        email_thread_id: null,
+        status: 'sent',
+        redirect_source_url: null,
+        redirected_at: null,
+        status_updated_at: new Date(Date.now() - (job.days_ago + 1) * 24 * 60 * 60 * 1000).toISOString(),
+        classification_confidence: 0,
+    });
+}
 for (const app of APPLICATIONS) await seed('Applications', app);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,21 +412,44 @@ await seed('RecalibrationLog', {
     user_id: USER_ID,
     week_of: '2026-06-09',
     metrics: {
-        applications_sent: 2,
+        applications_sent: 12,
         callbacks: 1,
-        rejections: 0,
-        ghosted: 0,
-        callback_rate: 0.5,
+        rejections: 1,
+        ghosted: 2,
+        callback_rate: 0.083,
     },
     agent_performance: {
-        ambition:    { correct: 2, incorrect: 0 },
-        realism:     { correct: 2, incorrect: 0 },
-        risk:        { correct: 2, incorrect: 0 },
-        opportunity: { correct: 2, incorrect: 0 },
+        ambition:    { correct: 3, incorrect: 9 },
+        realism:     { correct: 8, incorrect: 4 },
+        risk:        { correct: 10, incorrect: 2 },
+        opportunity: { correct: 7, incorrect: 5 },
     },
-    adjustments_made: [],
+    agent_score_averages: {
+        ambition: 82,
+        realism: 56,
+        risk: 27,
+        opportunity: 74,
+    },
+    skills_gap_summary: [
+        { skill: 'AWS Cloud Architecture',  flagged_count: 7 },
+        { skill: 'Production ML / MLOps',   flagged_count: 6 },
+        { skill: 'Kubernetes & Docker',     flagged_count: 5 },
+        { skill: 'Distributed Systems',     flagged_count: 5 },
+        { skill: 'PyTorch / Deep Learning', flagged_count: 4 },
+        { skill: 'Data Warehouse / dbt',    flagged_count: 3 },
+        { skill: 'Apache Kafka / Streaming', flagged_count: 3 },
+    ],
+    adjustments_made: [
+        {
+            agent: 'ambition',
+            parameter: 'ambition_threshold',
+            old_value: 70,
+            new_value: 58,
+            reason: 'Ambition Agent over-recommended stretch roles this week (avg score 82 vs realism avg 56). Lowering threshold to reduce overreach.',
+        },
+    ],
     emergency: false,
-    brief_text: 'Strong start — 50% callback rate on first 2 applications. Sea Limited ML Engineer callback received.',
+    brief_text: 'Week of 9 Jun 2026\n\n12 applications sent, 1 callback (Sea Limited — ML Engineer). Callback rate: 8.3%, in line with the Singapore market baseline.\n\nAgent Accuracy\nAmbition Agent underperformed this week — it recommended applying to 9 roles that generated no callback, averaging a score of 82 while Realism averaged only 56 on those same roles. Realism, Risk, and Opportunity Agents were broadly accurate. The Calibration Agent has lowered the Ambition threshold from 70 → 58 to reduce overreach next week.\n\nKey Actions\n• Start closing the skills gap in AWS and MLOps — these appeared in 7 and 6 JDs respectively.\n• Focus applications on roles where Realism scores above 65 — that is the sweet spot your profile is currently competitive for.\n• Prep for the Sea Limited ML Engineer callback.',
     created_at: NOW,
 });
 

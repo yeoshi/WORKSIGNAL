@@ -40,6 +40,8 @@ export async function GET() {
             metrics: entry.metrics,
             agent_performance: entry.agent_performance,
             adjustments_made: entry.adjustments_made,
+            agent_score_averages: entry.agent_score_averages ?? null,
+            skills_gap_summary: entry.skills_gap_summary ?? [],
             emergency: entry.emergency,
             brief_text: entry.brief_text,
             growth_activities: entry.growth_activities ?? [],
