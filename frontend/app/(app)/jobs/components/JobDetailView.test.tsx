@@ -176,11 +176,14 @@ describe('DebateCard (Req 15.2)', () => {
         expect(scoreEl.textContent).toContain('85/100');
     });
 
-    it('renders first-person speech with reasoning and key argument', () => {
+    it('renders key argument as tldr and reasoning in collapsible speech', () => {
         render(<DebateCard card={card} />);
+        expect(screen.getByTestId('debate-card-ambition-tldr').textContent).toContain(
+            'cross-functional leadership exposure'
+        );
+        fireEvent.click(screen.getByTestId('debate-card-ambition-toggle'));
         const speech = screen.getByTestId('debate-card-ambition-speech');
         expect(speech.textContent).toContain('Strong career-ceiling lift');
-        expect(speech.textContent).toContain('cross-functional leadership exposure');
     });
 
     it('does not render score section when failed is true', () => {
@@ -235,6 +238,8 @@ describe('DebateCardList (Req 15.2)', () => {
 
     it('renders each card with speech blocks', () => {
         render(<DebateCardList verdicts={makeVerdictSet()} />);
+        fireEvent.click(screen.getByTestId('debate-card-ambition-toggle'));
+        fireEvent.click(screen.getByTestId('debate-card-opportunity-toggle'));
         expect(screen.getByTestId('debate-card-ambition-speech').textContent).toContain(
             'Strong career-ceiling lift'
         );
@@ -452,6 +457,35 @@ describe('ResumePreview (Req 15.4)', () => {
         const badge = screen.getByTestId('resume-base-fallback');
         expect(badge.textContent).toContain('Base resume');
     });
+
+    it('shows tailoring loading state while resume streams', () => {
+        render(
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+                resumeLoading
+            />
+        );
+        expect(screen.getByTestId('resume-loading').textContent).toContain(
+            'Tailoring your resume',
+        );
+    });
+
+    it('renders embedded PDF preview when resumeUrl is available', () => {
+        render(
+            <ResumePreview
+                materials={makeMaterials()}
+                decision={makeDecision()}
+                resumeS3Key="resumes/user-001/job-001-customised.pdf"
+                resumeUrl="https://example.com/resume.pdf"
+            />
+        );
+        const preview = screen.getByTestId('resume-preview-pdf');
+        const iframe = preview.querySelector('iframe');
+        expect(iframe).toBeTruthy();
+        expect(iframe?.getAttribute('src')).toContain('https://example.com/resume.pdf');
+    });
 });
 
 describe('CoverLetterEditor (Req 15.4)', () => {
@@ -545,6 +579,63 @@ describe('CoverLetterEditor (Req 15.4)', () => {
         expect(screen.getByTestId('cover-letter-download')).toBeDefined();
         expect(screen.getByTestId('cover-letter-download-btn')).toBeDefined();
         expect(screen.queryByTestId('cover-letter-textarea')).toBeNull();
+    });
+
+    it('renders streamed tailoring notes', () => {
+        render(
+            <CoverLetterEditor
+                value="Dear Hiring Manager..."
+                onChange={() => { }}
+                decision={makeDecision()}
+                tailoringNotes={'- Emphasise React experience\n- Move leadership bullets up'}
+                company="TechCorp Singapore"
+            />
+        );
+        const notes = screen.getByTestId('tailoring-notes-text');
+        expect(notes.textContent).toContain('Emphasise React experience');
+    });
+
+    it('shows tailoring notes loading state', () => {
+        render(
+            <CoverLetterEditor
+                value=""
+                onChange={() => { }}
+                decision={makeDecision()}
+                tailoringLoading={true}
+                company="TechCorp Singapore"
+            />
+        );
+        expect(screen.getByTestId('tailoring-notes-loading')).toBeDefined();
+        expect(screen.getByTestId('tailoring-notes-loading').textContent).toContain(
+            'TechCorp Singapore',
+        );
+    });
+
+    it('shows cover letter streaming overlay before first tokens arrive', () => {
+        render(
+            <CoverLetterEditor
+                value=""
+                onChange={() => { }}
+                decision={makeDecision()}
+                isLoading={true}
+            />
+        );
+        expect(screen.getByTestId('cover-letter-loading')).toBeDefined();
+        expect(screen.getByTestId('cover-letter-textarea')).toBeDefined();
+    });
+
+    it('shows streaming tokens in the textarea without clearing', () => {
+        render(
+            <CoverLetterEditor
+                value="Dear Hiring"
+                onChange={() => { }}
+                decision={makeDecision()}
+                isLoading={true}
+            />
+        );
+        const textarea = screen.getByTestId('cover-letter-textarea') as HTMLTextAreaElement;
+        expect(textarea.value).toBe('Dear Hiring');
+        expect(screen.queryByTestId('cover-letter-loading')).toBeNull();
     });
 });
 

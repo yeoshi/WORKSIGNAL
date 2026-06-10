@@ -134,6 +134,23 @@ export async function POST(request: Request) {
         });
         const agentVerdict = verdicts[0] as Record<string, unknown> | undefined;
 
+        const storedLetter =
+            typeof agentVerdict?.cover_letter_text === 'string'
+                ? agentVerdict.cover_letter_text.trim()
+                : '';
+        if (storedLetter) {
+            return Response.json({
+                cover_letter: storedLetter,
+                job: {
+                    title: job.role_title,
+                    company: job.company,
+                    employer_email: job.employer_email ?? null,
+                    source_url: job.source_url ?? null,
+                },
+                has_employer_email: !!job.employer_email,
+            });
+        }
+
         const REGION = process.env.AWS_DEFAULT_REGION ?? 'us-east-1';
         const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'us.anthropic.claude-sonnet-4-6';
 

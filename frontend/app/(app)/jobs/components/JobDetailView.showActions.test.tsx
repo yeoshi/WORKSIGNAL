@@ -71,6 +71,7 @@ function makeData(): JobDetailData {
       customisation_applied: true,
     },
     coverLetter: 'Hello',
+    tailoringNotes: '- Lead with analytics wins',
   };
 }
 

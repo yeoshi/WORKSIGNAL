@@ -3,7 +3,7 @@
 /**
  * Form controls for onboarding — Work Signal brand tokens (paper / teal / navy).
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type HTMLAttributes, type ReactNode } from 'react';
 
 export function Button({
   children,
@@ -73,6 +73,7 @@ export function TextInput({
   onChange,
   placeholder,
   type = 'text',
+  inputMode,
   invalid = false,
   disabled = false,
 }: {
@@ -81,6 +82,7 @@ export function TextInput({
   onChange: (value: string) => void;
   placeholder?: string;
   type?: 'text' | 'number';
+  inputMode?: HTMLAttributes<HTMLInputElement>['inputMode'];
   invalid?: boolean;
   disabled?: boolean;
 }) {
@@ -88,10 +90,21 @@ export function TextInput({
     <input
       id={id}
       type={type}
+      inputMode={inputMode}
       value={value}
       placeholder={placeholder}
       disabled={disabled}
       aria-invalid={invalid || undefined}
+      step={type === 'number' ? '1' : undefined}
+      onWheel={
+        type === 'number'
+          ? (e) => {
+              // Browsers change focused number inputs on scroll — easy to drift
+              // from e.g. 5500 to 5498 without noticing.
+              e.currentTarget.blur();
+            }
+          : undefined
+      }
       onChange={(e) => onChange(e.target.value)}
       className={[
         'w-full rounded-xl border bg-ws-card px-3 py-2.5 text-sm text-ws-ink outline-none',

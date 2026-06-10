@@ -202,3 +202,21 @@ export function detectSections(text: string): SectionBlocks {
 
   return blocks;
 }
+
+/** Section headings in document order (for resume tailoring prompts). */
+export function extractOrderedSectionHeadings(text: string): string[] {
+  const lines = text.split('\n');
+  const headings: string[] = [];
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!isHeadingLine(trimmed)) continue;
+    const key = trimmed.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    headings.push(trimmed);
+  }
+
+  return headings;
+}

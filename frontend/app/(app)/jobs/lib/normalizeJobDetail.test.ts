@@ -19,6 +19,25 @@ describe('normalizeJobDetail', () => {
     expect(result?.verdicts.ambition?.verdict).toBe('apply');
     expect(result?.decision.summary).toBe('Apply');
     expect(result?.coverLetter).toBe('Hello');
+    expect(result?.tailoringNotes).toBe('');
+  });
+
+  it('maps tailoring notes from API payload', () => {
+    const result = normalizeJobDetail({
+      job: { job_id: 'j1', company: 'Acme' },
+      verdicts: {},
+      decision: {
+        decision: 'deadlock_escalate',
+        summary: 'Split',
+        agents_for: [],
+        agents_against: [],
+        user_action_required: true,
+      },
+      coverLetterText: 'Hello',
+      tailoringNotes: '- Lead with product wins',
+    });
+
+    expect(result?.tailoringNotes).toBe('- Lead with product wins');
   });
 
   it('returns null for invalid payloads', () => {
