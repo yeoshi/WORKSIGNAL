@@ -4,7 +4,6 @@
  */
 
 import type { DynamoDBWrapper } from '@/app/api/lib/dynamodb';
-import { getApiBaseUrl } from '../lib/apiGateway';
 import {
   ensureLocalAuthUser,
   getLocalUser,
@@ -66,22 +65,17 @@ export async function persistOAuthSignIn(
     user_id: sub,
   });
 
-  const res = await fetch(`${getApiBaseUrl()}/auth/persist-oauth`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      profile: input.profile,
-      account: input.account,
-      encryptionSecret: input.encryptionSecret,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(text || 'OAuth persistence failed');
-  }
-
   const isNewUser = existing === undefined;
+  const now = new Date().toISOString();
+
+  await input.db.put(USERS_TABLE, {
+    ...(existing as Record<string, unknown> ?? {}),
+    user_id: sub,
+    email,
+    name,
+    updated_at: now,
+    created_at: (existing as Record<string, unknown> | undefined)?.created_at ?? now,
+  });
 
   return {
     isNewUser,

@@ -47,8 +47,10 @@ export const authOptions: NextAuthOptions = {
 
         return result.redirectUrl ?? true;
       } catch (error) {
-        console.error('OAuth sign-in persistence failed:', error);
-        return false;
+        // Allow sign-in even if DynamoDB persistence fails — user gets in,
+        // they may need to complete onboarding again.
+        console.error('OAuth sign-in persistence failed (non-fatal):', error);
+        return true;
       }
     },
     async jwt({ token, account, profile }) {
