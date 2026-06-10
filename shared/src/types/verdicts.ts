@@ -96,3 +96,68 @@ export interface MasterDecision {
   /** Agents whose verdicts were unavailable in degraded mode (Req 22.4). */
   agent_failures?: AgentName[];
 }
+
+/**
+ * The three actions the Orchestrator Agent can recommend after resolving a
+ * deadlock or borderline apply decision. `monitor` is collapsed into `hold`
+ * in the current implementation — only `apply` and `upskill` are distinct UX
+ * paths.
+ */
+export type OrchestratorAction = 'apply' | 'upskill' | 'hold';
+
+/** Summary of recurring skill gaps passed to the Orchestrator Agent. */
+export interface SkillGapSummary {
+  skill: string;
+  /** Number of distinct jobs that have flagged this gap. */
+  times_flagged: number;
+  /** True when the Growth Agent has already produced a roadmap for this skill. */
+  has_roadmap: boolean;
+}
+
+/**
+ * The Orchestrator Agent's verdict produced after a heuristic scoring pass
+ * (deterministic action + confidence) augmented with Bedrock-authored prose
+ * (holistic_summary). Only present on `EnrichedMasterDecision` when the
+ * reasoning pass was triggered (deadlock or Realism-floor breach).
+ */
+export interface OrchestratorVerdict {
+  /** The recommended action. */
+  action: OrchestratorAction;
+  /** Confidence in the action, 0–100. */
+  confidence: number;
+  /**
+   * One paragraph addressed to the user explaining how the deadlock was
+   * resolved. Authored by Bedrock; falls back to a template string when
+   * Bedrock is unavailable.
+   */
+  holistic_summary: string;
+  /** One sentence naming the single factor that tipped the decision. */
+  deciding_factor: string;
+  /**
+   * Present when `action === 'upskill'`: the specific skills to address.
+   * Maps to SkillGaps table keys; Growth Agent is triggered on user
+   * confirmation.
+   */
+  upskill_targets?: string[];
+  /**
+   * Present when `action === 'apply'`: what to emphasise in the application
+   * to address the opposing agents' concerns.
+   */
+  apply_angle?: string;
+}
+
+/**
+ * A `MasterDecision` enriched with the Orchestrator Agent's reasoning pass.
+ * `resolved_action` is the single field the UI should act on; it is derived
+ * deterministically for clear outcomes and from `orchestrator_verdict.action`
+ * for deadlock / borderline cases.
+ */
+export interface EnrichedMasterDecision extends MasterDecision {
+  /** The final action the UI should present to the user. */
+  resolved_action: OrchestratorAction;
+  /**
+   * Present when the Orchestrator Agent reasoning pass fired (deadlock or
+   * Realism-floor breach on an apply decision).
+   */
+  orchestrator_verdict?: OrchestratorVerdict;
+}

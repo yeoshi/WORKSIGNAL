@@ -176,11 +176,14 @@ describe('DebateCard (Req 15.2)', () => {
         expect(scoreEl.textContent).toContain('85/100');
     });
 
-    it('renders first-person speech with reasoning and key argument', () => {
+    it('renders key argument as tldr and reasoning in collapsible speech', () => {
         render(<DebateCard card={card} />);
+        expect(screen.getByTestId('debate-card-ambition-tldr').textContent).toContain(
+            'cross-functional leadership exposure'
+        );
+        fireEvent.click(screen.getByTestId('debate-card-ambition-toggle'));
         const speech = screen.getByTestId('debate-card-ambition-speech');
         expect(speech.textContent).toContain('Strong career-ceiling lift');
-        expect(speech.textContent).toContain('cross-functional leadership exposure');
     });
 
     it('does not render score section when failed is true', () => {
@@ -235,6 +238,8 @@ describe('DebateCardList (Req 15.2)', () => {
 
     it('renders each card with speech blocks', () => {
         render(<DebateCardList verdicts={makeVerdictSet()} />);
+        fireEvent.click(screen.getByTestId('debate-card-ambition-toggle'));
+        fireEvent.click(screen.getByTestId('debate-card-opportunity-toggle'));
         expect(screen.getByTestId('debate-card-ambition-speech').textContent).toContain(
             'Strong career-ceiling lift'
         );

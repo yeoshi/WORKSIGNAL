@@ -64,6 +64,10 @@ export * from './orchestrator/degradedResolution.js';
 // --- Master_Orchestrator Realism floor (Req 12.6) ---
 export * from './orchestrator/realismFloor.js';
 
+// --- Master_Orchestrator enriched resolution + heuristic scoring ---
+export * from './orchestrator/resolveEnriched.js';
+export * from './orchestrator/scoreHeuristic.js';
+
 // --- Onboarding resume upload (PDF validation + S3 storage) ---
 export * from './onboarding/resumeUpload.js';
 

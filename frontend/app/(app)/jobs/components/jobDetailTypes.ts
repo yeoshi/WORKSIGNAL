@@ -1,4 +1,4 @@
-import type { Job, MasterDecision, Materials, VerdictSet } from '@worksignal/shared';
+import type { EnrichedMasterDecision, Job, MasterDecision, Materials, VerdictSet } from '@worksignal/shared';
 
 /**
  * The full data payload backing the Job Detail hero screen.
@@ -8,7 +8,14 @@ import type { Job, MasterDecision, Materials, VerdictSet } from '@worksignal/sha
 export interface JobDetailData {
   job: Job;
   verdicts: VerdictSet;
+  /** Base decision from the deterministic tree. */
   decision: MasterDecision;
+  /**
+   * Present when the Orchestrator Agent reasoning pass fired (deadlock or
+   * borderline apply). When set, the UI renders the OrchestratorPanel and
+   * uses `enrichedDecision.resolved_action` as the primary CTA.
+   */
+  enrichedDecision?: EnrichedMasterDecision;
   materials: Materials;
   /** The cover-letter text to seed the editable field (Req 15.4). */
   coverLetter: string;

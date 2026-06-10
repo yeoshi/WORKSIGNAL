@@ -1,6 +1,6 @@
 'use client';
 
-import { type JSX, useEffect, useRef } from 'react';
+import { type JSX, useEffect, useRef, useState } from 'react';
 import type { AgentRunEvent } from '../../../api/agent/run/route';
 import type { RunState } from '../hooks/useAgentRun';
 
@@ -166,6 +166,85 @@ function DecisionBadge({ decision, summary }: { decision: string; summary: strin
     );
 }
 
+// ── Orchestrator reasoning block ──────────────────────────────────────────────
+
+type OrchestratorReasoningEvent = Extract<AgentRunEvent, { type: 'orchestrator_reasoning' }>;
+
+const ACTION_META: Record<string, { label: string; bg: string; text: string; icon: string }> = {
+    apply:   { label: 'APPLY',              bg: 'bg-emerald-50', text: 'text-emerald-700', icon: '✅' },
+    upskill: { label: 'BUILD SKILLS FIRST', bg: 'bg-amber-50',   text: 'text-amber-700',   icon: '🧠' },
+    hold:    { label: 'HOLD',               bg: 'bg-gray-50',    text: 'text-gray-600',    icon: '⏸' },
+};
+
+function OrchestratorBlock({ event }: { event: OrchestratorReasoningEvent }) {
+    const [expanded, setExpanded] = useState(false);
+    const meta = ACTION_META[event.action] ?? ACTION_META.hold!;
+
+    return (
+        <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-indigo-700">🧩 Orchestrator resolved deadlock</span>
+                <span className={`rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${meta.bg} ${meta.text}`}>
+                    {meta.icon} {meta.label}
+                </span>
+            </div>
+
+            {/* Score table */}
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-[11px] text-ws-muted">
+                {Object.entries(event.scores).map(([agent, score]) => (
+                    <div key={agent} className="flex items-center gap-1">
+                        <span className="capitalize text-ws-ink">{agent}</span>
+                        <span className="ml-auto text-[10px]">{score}</span>
+                    </div>
+                ))}
+            </div>
+
+            {/* Confidence bar */}
+            <div className="mt-2 flex items-center gap-2">
+                <div className="h-1.5 flex-1 rounded-full bg-indigo-100">
+                    <div
+                        className="h-1.5 rounded-full bg-indigo-500 transition-all duration-700"
+                        style={{ width: `${event.confidence}%` }}
+                    />
+                </div>
+                <span className="w-8 text-right font-mono text-[11px] text-ws-muted">{event.confidence}%</span>
+            </div>
+
+            {/* Deciding factor — always visible */}
+            <p className="mt-2 border-l-2 border-indigo-400 pl-2 text-xs font-medium text-ws-ink">
+                {event.deciding_factor}
+            </p>
+
+            {/* Apply angle / upskill targets */}
+            {event.apply_angle && (
+                <p className="mt-1.5 text-[11px] text-ws-muted">
+                    <span className="text-ws-ink">Angle: </span>{event.apply_angle}
+                </p>
+            )}
+            {event.upskill_targets && event.upskill_targets.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                    {event.upskill_targets.map((s) => (
+                        <span key={s} className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">{s}</span>
+                    ))}
+                </div>
+            )}
+
+            {/* Full holistic summary — collapsible */}
+            <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-2 flex items-center gap-1 text-[11px] font-medium text-indigo-500 hover:text-indigo-700"
+            >
+                {expanded ? '▲ Hide full reasoning' : '▼ Full reasoning'}
+            </button>
+            {expanded && (
+                <p className="mt-1.5 text-xs leading-relaxed text-ws-muted">{event.holistic_summary}</p>
+            )}
+        </div>
+    );
+}
+
 // ── Types for rendering ───────────────────────────────────────────────────────
 
 type DebateResult = Extract<AgentRunEvent, { type: 'debate_result' }>;
@@ -176,6 +255,7 @@ interface DebateBlock {
     salary: string;
     agents: AgentRunEvent[];
     decision?: DebateResult;
+    orchestratorReasoning?: OrchestratorReasoningEvent;
 }
 
 // ── Event renderer ────────────────────────────────────────────────────────────
@@ -198,6 +278,8 @@ function renderEvents(events: AgentRunEvent[]): JSX.Element[] {
             currentDebate = { title: ev.title, company: ev.company, salary: ev.salary, agents: [] };
         } else if ((ev.type === 'agent_result' || ev.type === 'agent_failed' || ev.type === 'exa_research' || ev.type === 'db_persist') && currentDebate) {
             currentDebate.agents.push(ev);
+        } else if (ev.type === 'orchestrator_reasoning' && currentDebate) {
+            currentDebate.orchestratorReasoning = ev;
         } else if (ev.type === 'debate_result') {
             if (currentDebate) {
                 currentDebate.decision = ev;
@@ -262,6 +344,10 @@ function renderEvents(events: AgentRunEvent[]): JSX.Element[] {
                     <p className="mt-1 text-[11px] text-amber-600">
                         ⚠ Failed agents: {failedAgents.map((f) => f.agent).join(', ')}
                     </p>
+                )}
+
+                {d.orchestratorReasoning && (
+                    <OrchestratorBlock event={d.orchestratorReasoning} />
                 )}
 
                 {d.decision && (
