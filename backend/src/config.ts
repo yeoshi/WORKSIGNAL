@@ -24,3 +24,13 @@ export const SCAN_LOOKBACK_DAYS: number = parseInt(
   process.env.SCAN_LOOKBACK_DAYS ?? '14',
   10,
 );
+
+/**
+ * When true, delete all existing Jobs and AgentVerdicts for the user before
+ * running the pipeline. Useful for demo runs where you want a clean slate so
+ * the dashboard shows only results from the current execution.
+ *
+ * Set CLEAR_OLD=true in .env.aws (or the environment) to enable.
+ */
+export const CLEAR_OLD: boolean =
+  (process.env.CLEAR_OLD ?? 'false').toLowerCase() === 'true';

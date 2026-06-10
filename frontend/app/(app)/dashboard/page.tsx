@@ -160,6 +160,10 @@ function DashboardPageContent() {
             onOpenIssues={() => setIssuesOpen(true)}
             onRunAgent={() => { setAgentRunOpen(true); agentRun.start(); }}
             agentRunning={agentRun.state === 'running'}
+            onClearDashboard={async () => {
+              await fetch('/api/dashboard/clear', { method: 'DELETE' });
+              reload();
+            }}
           />
 
           <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,26%)] lg:gap-5">

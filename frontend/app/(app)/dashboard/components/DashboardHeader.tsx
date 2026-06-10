@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import type { AgentStatusSummary } from '../types';
 import { formatRelativeFuture, formatRelativePast } from '../lib/formatRelative';
@@ -22,6 +23,7 @@ export interface DashboardHeaderProps {
   onOpenIssues: () => void;
   onRunAgent?: () => void;
   agentRunning?: boolean;
+  onClearDashboard?: () => Promise<void>;
 }
 
 export function DashboardHeader({
@@ -30,9 +32,28 @@ export function DashboardHeader({
   onOpenIssues,
   onRunAgent = () => {},
   agentRunning = false,
+  onClearDashboard,
 }: DashboardHeaderProps) {
   const { data: session } = useSession();
   const firstName = getFirstName(session?.user?.name);
+  const [clearState, setClearState] = useState<'idle' | 'confirm' | 'clearing'>('idle');
+
+  async function handleClearClick() {
+    if (clearState === 'idle') {
+      setClearState('confirm');
+      // Auto-reset if user doesn't confirm within 3 seconds.
+      setTimeout(() => setClearState((s) => (s === 'confirm' ? 'idle' : s)), 3000);
+      return;
+    }
+    if (clearState === 'confirm' && onClearDashboard) {
+      setClearState('clearing');
+      try {
+        await onClearDashboard();
+      } finally {
+        setClearState('idle');
+      }
+    }
+  }
 
   return (
     <header
@@ -53,6 +74,45 @@ export function DashboardHeader({
       </div>
 
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-3 sm:gap-4">
+        {/* Clear Dashboard */}
+        {onClearDashboard && (
+          <button
+            type="button"
+            onClick={() => { void handleClearClick(); }}
+            disabled={clearState === 'clearing' || agentRunning}
+            className={[
+              'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition',
+              clearState === 'confirm'
+                ? 'border-red-400 bg-red-50 text-red-600 hover:bg-red-100'
+                : clearState === 'clearing'
+                  ? 'cursor-not-allowed border-ws-line bg-ws-card text-ws-muted'
+                  : 'border-ws-line bg-ws-card text-ws-muted hover:border-red-300 hover:text-red-500',
+            ].join(' ')}
+            aria-label="Clear all jobs and verdicts from dashboard"
+          >
+            {clearState === 'clearing' ? (
+              <>
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Clearing…
+              </>
+            ) : clearState === 'confirm' ? (
+              <>
+                <svg aria-hidden className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                Confirm clear?
+              </>
+            ) : (
+              <>
+                <svg aria-hidden className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear
+              </>
+            )}
+          </button>
+        )}
+
         {/* Run WorkSignal Agent */}
         <button
           type="button"
