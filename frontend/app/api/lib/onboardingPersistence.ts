@@ -3,12 +3,37 @@
  * LOCAL_DEV=true (or DEMO_MODE).
  */
 
-import { getApiBaseUrl } from './apiGateway';
+import { PRIORITY_FACTORS } from '@/app/types/shared';
+import type { DynamoDBWrapper } from './dynamodb';
 import {
   getLocalUser,
   isLocalOnboardingEnabled,
   putLocalUser,
 } from './localOnboardingStore';
+
+const USERS_TABLE = 'Users';
+
+async function loadDynamoUser(
+  db: DynamoDBWrapper,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  const existing = await db.get<Record<string, unknown>>(USERS_TABLE, {
+    user_id: userId,
+  });
+  return existing ?? { user_id: userId };
+}
+
+async function saveDynamoUser(
+  db: DynamoDBWrapper,
+  record: Record<string, unknown>,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.put(USERS_TABLE, {
+    ...record,
+    updated_at: now,
+    created_at: record.created_at ?? now,
+  });
+}
 
 export async function loadOnboardingUser(
   userId: string,
@@ -33,25 +58,11 @@ export async function createOnboardingServiceForRequest() {
     return createLocalOnboardingService();
   }
 
-  return createRemoteOnboardingService();
+  const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
+  return createDynamoOnboardingService(new DynamoDBWrapper());
 }
 
-function createRemoteOnboardingService() {
-  const base = getApiBaseUrl();
-
-  async function postJson(path: string, body: unknown) {
-    const res = await fetch(`${base}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(text || `Onboarding request failed: ${path}`);
-    }
-    return res.json().catch(() => ({}));
-  }
-
+function createDynamoOnboardingService(db: DynamoDBWrapper) {
   return {
     async setCareerProfile(
       userId: string,
@@ -59,22 +70,39 @@ function createRemoteOnboardingService() {
       residency: string,
       switchContext?: { from: string; to: string },
     ) {
-      await postJson('/onboarding/profile', {
-        userId,
-        stage,
-        residency,
-        switchContext,
-      });
+      const record = await loadDynamoUser(db, userId);
+      record.career_stage = stage;
+      record.residency_status = residency;
+      if (switchContext) {
+        record.career_switch_context = switchContext;
+      }
+      await saveDynamoUser(db, record);
     },
     async confirmResumeProfile(
       userId: string,
       profile: Record<string, unknown>,
       resumeS3Key?: string,
     ) {
-      await postJson('/onboarding/resume-details', { userId, profile, resumeS3Key });
+      const record = await loadDynamoUser(db, userId);
+      const existingProfile = (record.profile ?? {}) as Record<string, unknown>;
+      record.profile = {
+        ...profile,
+        target_roles: existingProfile.target_roles ?? [],
+        target_industries: existingProfile.target_industries ?? [],
+        dream_companies: existingProfile.dream_companies ?? [],
+        priority_ranking:
+          existingProfile.priority_ranking ?? [...PRIORITY_FACTORS],
+      };
+      if (resumeS3Key) {
+        record.resume_s3_key = resumeS3Key;
+      }
+      await saveDynamoUser(db, record);
     },
     async setCoverLetterSample(userId: string, s3Key: string, sampleText: string) {
-      await postJson('/onboarding/cover-letter', { userId, s3Key, sampleText });
+      const record = await loadDynamoUser(db, userId);
+      record.cover_letter_sample_s3_key = s3Key;
+      record.cover_letter_sample_text = sampleText;
+      await saveDynamoUser(db, record);
     },
     async setTargets(
       userId: string,
@@ -82,18 +110,59 @@ function createRemoteOnboardingService() {
       industries: string[],
       dreamCompanies: string[],
     ) {
-      await postJson('/onboarding/targets', { userId, roles, industries, dreamCompanies });
+      const record = await loadDynamoUser(db, userId);
+      const existingProfile = (record.profile ?? {}) as Record<string, unknown>;
+      record.profile = {
+        ...existingProfile,
+        target_roles: roles,
+        target_industries: industries,
+        dream_companies: dreamCompanies,
+      };
+      await saveDynamoUser(db, record);
     },
     async setPriorityRanking(userId: string, ranking: string[]) {
-      await postJson('/onboarding/targets', { userId, priority_ranking: ranking });
+      const record = await loadDynamoUser(db, userId);
+      const existingProfile = (record.profile ?? {}) as Record<string, unknown>;
+      record.profile = {
+        ...existingProfile,
+        priority_ranking: ranking,
+      };
+      await saveDynamoUser(db, record);
       return undefined;
     },
     async setNonNegotiables(userId: string, nn: Record<string, unknown>) {
-      await postJson('/onboarding/targets', { userId, non_negotiables: nn });
+      const record = await loadDynamoUser(db, userId);
+      record.non_negotiables = nn;
+      await saveDynamoUser(db, record);
       return undefined;
     },
     async editOnboarding(userId: string, patch: Record<string, unknown>) {
-      return postJson('/onboarding', { userId, patch });
+      const record = await loadDynamoUser(db, userId);
+      const existingProfile = (record.profile ?? {}) as Record<string, unknown>;
+      const profile = {
+        ...existingProfile,
+        ...(Array.isArray(patch.target_roles)
+          ? { target_roles: patch.target_roles }
+          : {}),
+        ...(Array.isArray(patch.target_industries)
+          ? { target_industries: patch.target_industries }
+          : {}),
+        ...(Array.isArray(patch.dream_companies)
+          ? { dream_companies: patch.dream_companies }
+          : {}),
+        ...(Array.isArray(patch.priority_ranking)
+          ? { priority_ranking: patch.priority_ranking }
+          : {}),
+      };
+      record.profile = profile;
+      if (patch.non_negotiables) {
+        record.non_negotiables = patch.non_negotiables;
+      }
+      await saveDynamoUser(db, record);
+      return {
+        ...patch,
+        non_negotiables: patch.non_negotiables ?? record.non_negotiables,
+      };
     },
   };
 }
