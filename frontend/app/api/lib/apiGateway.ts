@@ -5,6 +5,19 @@ export function getApiBaseUrl(): string {
   return base.replace(/\/$/, '');
 }
 
+/** True when NEXT_PUBLIC_API_URL is set (production AWS API Gateway). */
+export function isRemoteBackendConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_API_URL?.trim());
+}
+
+/**
+ * Vercel/production should proxy long-running agent work to API Gateway.
+ * Local dev without NEXT_PUBLIC_API_URL runs the pipeline in-process instead.
+ */
+export function shouldProxyAgentRunToRemote(): boolean {
+  return isRemoteBackendConfigured();
+}
+
 export async function proxyJson(
   path: string,
   init?: RequestInit,

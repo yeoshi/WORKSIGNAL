@@ -11,6 +11,11 @@
 
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getAuthenticatedUser, unauthorizedResponse } from '../../lib/auth';
+import {
+  getApiBaseUrl,
+  isRemoteBackendConfigured,
+  shouldProxyAgentRunToRemote,
+} from '../../lib/apiGateway';
 import { getAwsRegion } from '../../lib/awsRegion';
 import { loadAgentBackendModules } from '../../lib/agentBackend';
 import { DEMO_MODE } from '../../lib/demo';
@@ -91,13 +96,68 @@ export type AgentRunEvent =
 
 // ── GET handler ─────────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(request: Request) {
     if (DEMO_MODE) {
         return Response.json({ error: 'Not available in demo mode' }, { status: 400 });
     }
 
     const user = await getAuthenticatedUser();
     if (!user) return unauthorizedResponse();
+
+    if (process.env.VERCEL === '1' && !isRemoteBackendConfigured()) {
+        return Response.json(
+            {
+                error: 'Error',
+                message:
+                    'Run Agent is not available on this deployment yet. Set NEXT_PUBLIC_API_URL to your AWS API Gateway URL, or use the local dev server.',
+            },
+            { status: 503 },
+        );
+    }
+
+    if (shouldProxyAgentRunToRemote()) {
+        try {
+            const upstream = await fetch(`${getApiBaseUrl()}/agent/run`, {
+                headers: {
+                    cookie: request.headers.get('cookie') ?? '',
+                    accept: 'text/event-stream',
+                },
+            });
+
+            if (!upstream.ok || !upstream.body) {
+                const text = await upstream.text().catch(() => '');
+                return Response.json(
+                    {
+                        error: 'Error',
+                        message:
+                            text ||
+                            `Agent API returned ${upstream.status}. Check NEXT_PUBLIC_API_URL and that /agent/run is deployed on API Gateway.`,
+                    },
+                    { status: upstream.status || 502 },
+                );
+            }
+
+            return new Response(upstream.body, {
+                status: upstream.status,
+                headers: {
+                    'Content-Type':
+                        upstream.headers.get('content-type') ?? 'text/event-stream',
+                    'Cache-Control': 'no-cache, no-transform',
+                    Connection: 'keep-alive',
+                    'X-Accel-Buffering': 'no',
+                },
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Agent API unavailable';
+            return Response.json(
+                {
+                    error: 'Error',
+                    message: `${message}. Verify NEXT_PUBLIC_API_URL points to a live API Gateway endpoint.`,
+                },
+                { status: 502 },
+            );
+        }
+    }
 
     const modulesReady = loadAgentBackendModules();
 

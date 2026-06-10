@@ -1,7 +1,36 @@
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Vercel often runs `next build` directly (not `npm run build`), so stage agent
+// sources here as well — required for Run Agent on serverless.
+const isProductionBuild =
+  process.env.VERCEL === '1' || process.argv.includes('build');
+if (isProductionBuild) {
+  execSync('node scripts/stage-agent-backend.mjs', {
+    cwd: __dirname,
+    stdio: 'inherit',
+  });
+} else if (
+  !existsSync(
+    path.join(__dirname, '.worksignal/backend/src/discovery/opportunityScanner.ts'),
+  )
+) {
+  try {
+    execSync('node scripts/stage-agent-backend.mjs', {
+      cwd: __dirname,
+      stdio: 'inherit',
+    });
+  } catch (error) {
+    console.warn(
+      '[next.config] Agent backend staging skipped (local monorepo fallback still works):',
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
