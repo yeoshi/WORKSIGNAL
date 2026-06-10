@@ -40,11 +40,11 @@ export default function HomePage() {
       <div className="relative z-10 flex max-w-2xl flex-col items-center text-center">
         <Logo size="lg" inverted />
         <h1 className="mt-6 font-wordmark text-5xl font-semibold tracking-tight sm:text-6xl">
-          Own your job search.
+          Your job search team. Working 24/7.
         </h1>
-        <p className="mt-4 max-w-lg text-lg text-white/85">
-          Work Signal is your personal AI job-search advisor. Track applications,
-          debate every role, and grow your network — all in one place.
+        <p className="mt-4 max-w-xl text-lg text-white/85">
+          Most tools just apply. worksignal&apos;s 8 agents debate every role,
+          identify your gaps, and connect you to the right people — automatically.
         </p>
 
         <div className="mt-8">
