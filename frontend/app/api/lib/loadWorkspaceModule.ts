@@ -4,11 +4,16 @@ import { pathToFileURL } from 'node:url';
 
 let tsxRegistered = false;
 
-async function ensureTsxRegistered(): Promise<void> {
-  if (tsxRegistered) return;
-  const { register } = await import(/* webpackIgnore: true */ 'tsx/esm/api');
-  register();
-  tsxRegistered = true;
+function getStagedRoot(): string {
+  return path.join(process.cwd(), '.worksignal');
+}
+
+function getStagedBackendSrc(): string {
+  return path.join(getStagedRoot(), 'backend/src');
+}
+
+function getStagedTsconfig(): string {
+  return path.join(getStagedRoot(), 'tsconfig.json');
 }
 
 function getMonorepoRoot(): string {
@@ -31,13 +36,32 @@ function getMonorepoRoot(): string {
   return path.resolve(process.cwd(), '..');
 }
 
+function getBackendSrcRoot(): string {
+  const staged = getStagedBackendSrc();
+  if (existsSync(staged)) {
+    return staged;
+  }
+  return path.join(getMonorepoRoot(), 'backend/src');
+}
+
+async function ensureTsxRegistered(): Promise<void> {
+  if (tsxRegistered) return;
+  const { register } = await import(/* webpackIgnore: true */ 'tsx/esm/api');
+  const tsconfig = getStagedTsconfig();
+  if (existsSync(tsconfig)) {
+    register({ tsconfig });
+  } else {
+    register();
+  }
+  tsxRegistered = true;
+}
+
 export async function loadBackendModule<T>(relativePath: string): Promise<T> {
   await ensureTsxRegistered();
-  const root = getMonorepoRoot();
-  const abs = path.join(root, 'backend/src', relativePath);
+  const abs = path.join(getBackendSrcRoot(), relativePath);
   if (!existsSync(abs)) {
     throw new Error(
-      `Agent backend not found at ${abs}. Run the app from the monorepo with backend/ present, or set WORKSIGNAL_ROOT.`,
+      `Agent backend not found at ${abs}. Rebuild the frontend so agent sources are staged, or run from the monorepo locally.`,
     );
   }
   return import(/* webpackIgnore: true */ pathToFileURL(abs).href) as Promise<T>;

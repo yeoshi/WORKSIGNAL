@@ -15,10 +15,7 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, '..'),
   experimental: {
     outputFileTracingIncludes: {
-      '/api/agent/run': [
-        '../backend/src/**/*',
-        '../shared/src/**/*',
-      ],
+      '/api/agent/run': ['.worksignal/**/*'],
     },
     serverComponentsExternalPackages: [
       'next-auth',
