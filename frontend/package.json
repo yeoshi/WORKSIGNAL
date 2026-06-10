@@ -14,6 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@worksignal/shared": "file:../shared",
+    "@worksignal/backend": "file:../backend",
     "@ai-sdk/amazon-bedrock": "^4.0.114",
     "@ai-sdk/react": "^3.0.201",
     "@aws-sdk/client-bedrock-runtime": "^3.1064.0",
@@ -35,6 +37,9 @@
     "recharts": "^3.8.1",
     "tsx": "^4.22.4",
     "zod": "^4.4.3"
+  },
+  "overrides": {
+    "@worksignal/shared": "file:../shared"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
