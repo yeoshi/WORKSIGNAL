@@ -255,6 +255,25 @@ describe('generateMaterials — happy path (Req 14.1, 14.2, 14.3)', () => {
     expect(materials.cover_letter_text).toContain(GENERATED_COVER_LETTER);
   });
 
+  it('includes the cover letter style sample in the prompt when provided', async () => {
+    const calls: BedrockCall[] = [];
+    await generateMaterials(
+      makeJob(),
+      makeDecision(),
+      makeUser('citizen', {
+        cover_letter_sample_text:
+          'Dear Hiring Manager, I am excited about building products that help people.',
+      }),
+      { bedrock: makeFakeBedrock({ calls }), s3: makeFakeStore() },
+    );
+
+    const coverLetterCall = calls.find((c) =>
+      c.prompt.includes('expert cover-letter writer'),
+    );
+    expect(coverLetterCall?.prompt).toContain('WRITING STYLE SAMPLE');
+    expect(coverLetterCall?.prompt).toContain('excited about building products');
+  });
+
   it('passes the resume prompt with sponsorship instruction through Bedrock for need_sponsorship', async () => {
     const calls: BedrockCall[] = [];
     await generateMaterials(

@@ -1,224 +1,223 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ResidencyStatus } from '@worksignal/shared';
+import { PillTabs } from '../../components/ui/PillTabs';
+import { Snackbar } from '../../components/ui/Snackbar';
+import { fetchOnboardingState } from '../../onboarding/api';
+import type { ProfileSectionHandle } from '../../onboarding/lib/profileSectionHandle';
+import type { OnboardingRecord } from '../../onboarding/lib/onboardingStatus';
+import { AboutYouStep } from '../../onboarding/steps/AboutYouStep';
+import { TargetsStep } from '../../onboarding/steps/TargetsStep';
+import { ProfileResumeTab } from './components/ProfileResumeTab';
+import {
+  buildAboutYou,
+  buildTargetsInitial,
+} from './lib/profileState';
 
-interface ProfileData {
-  userId: string;
-  email: string | null;
-  name: string | null;
-  resumeS3Key: string | null;
-  resumeUrl: string | null;
-  careerStage: string | null;
-  residencyStatus: string | null;
-}
+const PROFILE_TABS = [
+  { id: 'resume', label: 'Resume & cover letter' },
+  { id: 'about', label: 'About you' },
+  { id: 'targets', label: 'Targets' },
+] as const;
 
-type UploadState = 'idle' | 'uploading' | 'success' | 'error';
-
-function resumeFileName(s3Key: string | null): string {
-  if (!s3Key) return 'resume.pdf';
-  const parts = s3Key.split('/');
-  return parts[parts.length - 1] ?? 'resume.pdf';
-}
+type ProfileTabId = (typeof PROFILE_TABS)[number]['id'];
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [newResumeUrl, setNewResumeUrl] = useState<string | null>(null);
-  const [newResumeKey, setNewResumeKey] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { status } = useSession();
+  const [activeTab, setActiveTab] = useState<ProfileTabId>('resume');
+  const [record, setRecord] = useState<OnboardingRecord | null>(null);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [liveResidency, setLiveResidency] = useState<ResidencyStatus | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    variant: 'success' | 'error';
+  }>({ open: false, message: '', variant: 'success' });
 
-  useEffect(() => {
-    fetch('/api/profile')
-      .then((r) => r.json())
-      .then((data: ProfileData) => setProfile(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const resumeRef = useRef<ProfileSectionHandle>(null);
+  const aboutRef = useRef<ProfileSectionHandle>(null);
+  const targetsRef = useRef<ProfileSectionHandle>(null);
+
+  const reload = useCallback(async () => {
+    const next = await fetchOnboardingState();
+    if (next) {
+      setRecord(next);
+      if (next.residency_status) {
+        setLiveResidency(next.residency_status);
+      }
+    }
   }, []);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      setUploadError('Only PDF files are accepted.');
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/');
       return;
     }
 
-    setUploadState('uploading');
-    setUploadError(null);
-
-    const formData = new FormData();
-    formData.append('resume', file);
-
-    try {
-      const res = await fetch('/api/onboarding/resume', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = (await res.json()) as { ok?: boolean; s3Key?: string; message?: string };
-
-      if (!res.ok || !data.ok) {
-        throw new Error(data.message ?? 'Upload failed');
-      }
-
-      setNewResumeKey(data.s3Key ?? null);
-      // Re-fetch profile to get fresh pre-signed URL
-      const profileRes = await fetch('/api/profile');
-      const profileData = (await profileRes.json()) as ProfileData;
-      setProfile(profileData);
-      setNewResumeUrl(profileData.resumeUrl);
-      setUploadState('success');
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed');
-      setUploadState('error');
-    } finally {
-      // Reset file input so same file can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    if (status !== 'authenticated') {
+      return;
     }
+
+    let active = true;
+
+    fetchOnboardingState()
+      .then((data) => {
+        if (!active) return;
+        const next = data ?? {};
+        setRecord(next);
+        if (next.residency_status) {
+          setLiveResidency(next.residency_status);
+        }
+        setReady(true);
+      })
+      .catch(() => {
+        if (active) {
+          setRecord({});
+          setReady(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [status, router]);
+
+  const aboutYou = useMemo(
+    () => (record ? buildAboutYou(record) : null),
+    [record],
+  );
+
+  const targetsInitial = useMemo(
+    () => (record ? buildTargetsInitial(record) : undefined),
+    [record],
+  );
+
+  const requiresSponsorship =
+    (liveResidency ?? aboutYou?.residency_status) === 'need_sponsorship';
+
+  function showSnackbar(message: string, variant: 'success' | 'error') {
+    setSnackbar({ open: true, message, variant });
   }
 
-  const activeResumeUrl = newResumeUrl ?? profile?.resumeUrl ?? null;
-  const activeResumeKey = newResumeKey ?? profile?.resumeS3Key ?? null;
-  const hasResume = Boolean(activeResumeKey);
+  async function handleSaveAll() {
+    setSaving(true);
 
-  if (loading) {
+    const aboutResult = await aboutRef.current?.validateAndSave();
+    if (!aboutResult?.ok) {
+      setActiveTab('about');
+      showSnackbar(aboutResult?.message ?? 'Could not save About you.', 'error');
+      setSaving(false);
+      return;
+    }
+
+    const resumeResult = await resumeRef.current?.validateAndSave();
+    if (!resumeResult?.ok) {
+      setActiveTab('resume');
+      showSnackbar(
+        resumeResult?.message ?? 'Could not save resume and profile details.',
+        'error',
+      );
+      setSaving(false);
+      return;
+    }
+
+    const targetsResult = await targetsRef.current?.validateAndSave();
+    if (!targetsResult?.ok) {
+      setActiveTab('targets');
+      showSnackbar(targetsResult?.message ?? 'Could not save Targets.', 'error');
+      setSaving(false);
+      return;
+    }
+
+    await reload();
+    showSnackbar('Profile saved', 'success');
+    setSaving(false);
+  }
+
+  if (status === 'loading' || !ready || !record) {
     return (
-      <div className="mx-auto flex max-w-2xl items-center justify-center px-4 py-24">
-        <Loader2 size={24} className="animate-spin text-gray-400" />
-      </div>
+      <main
+        data-testid="profile-loading"
+        className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center px-4"
+        aria-busy="true"
+      >
+        <p className="text-sm text-ws-muted">Loading profile…</p>
+      </main>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        Your default resume is shown on every job card. You can also upload a custom one per job.
-      </p>
-
-      {/* Account info */}
-      <section className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900">Account</h2>
-        <dl className="mt-4 space-y-3 text-sm">
-          {profile?.name ? (
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Name</dt>
-              <dd className="font-medium text-gray-900">{profile.name}</dd>
-            </div>
-          ) : null}
-          {profile?.email ? (
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Email</dt>
-              <dd className="font-medium text-gray-900">{profile.email}</dd>
-            </div>
-          ) : null}
-          {profile?.careerStage ? (
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Career stage</dt>
-              <dd className="font-medium capitalize text-gray-900">
-                {profile.careerStage.replace(/_/g, ' ')}
-              </dd>
-            </div>
-          ) : null}
-          {profile?.residencyStatus ? (
-            <div className="flex justify-between">
-              <dt className="text-gray-500">Residency</dt>
-              <dd className="font-medium capitalize text-gray-900">
-                {profile.residencyStatus.replace(/_/g, ' ')}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
-      </section>
-
-      {/* Default resume */}
-      <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Default resume</h2>
-          {hasResume ? (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-              Uploaded
-            </span>
-          ) : (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-              Not set
-            </span>
-          )}
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500">
-          This PDF is displayed in the resume panel of every job card as your base resume.
+    <main
+      data-testid="profile-page"
+      className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6"
+    >
+      <header className="flex flex-col gap-2">
+        <h1 className="font-wordmark text-3xl font-semibold text-ws-ink">Profile</h1>
+        <p className="text-sm text-ws-muted">
+          Update your resume, cover letter, and job-search preferences.
         </p>
+      </header>
 
-        {hasResume ? (
-          <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-            <FileText size={18} className="shrink-0 text-gray-400" />
-            <span className="min-w-0 flex-1 truncate text-sm text-gray-700">
-              {resumeFileName(activeResumeKey)}
-            </span>
-            {activeResumeUrl ? (
-              <a
-                href={activeResumeUrl}
-                download
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
-              >
-                Download
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+      <PillTabs
+        data-testid="profile-tabs"
+        options={[...PROFILE_TABS]}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as ProfileTabId)}
+      />
 
-        {uploadState === 'success' ? (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
-            <CheckCircle size={16} aria-hidden />
-            Resume uploaded successfully — it will appear on all job cards.
-          </div>
-        ) : null}
-
-        {uploadState === 'error' && uploadError ? (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">
-            <AlertCircle size={16} aria-hidden />
-            {uploadError}
-          </div>
-        ) : null}
-
-        <div className="mt-4">
-          <input
-            ref={fileInputRef}
-            id="resume-upload"
-            type="file"
-            accept=".pdf,application/pdf"
-            className="sr-only"
-            onChange={(e) => void handleFileChange(e)}
-          />
-          <label
-            htmlFor="resume-upload"
-            className={[
-              'inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition',
-              uploadState === 'uploading'
-                ? 'cursor-not-allowed border-gray-200 text-gray-400'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50',
-            ].join(' ')}
-          >
-            {uploadState === 'uploading' ? (
-              <>
-                <Loader2 size={15} className="animate-spin" aria-hidden />
-                Uploading…
-              </>
-            ) : (
-              <>
-                <Upload size={15} aria-hidden />
-                {hasResume ? 'Replace resume' : 'Upload resume'} (PDF)
-              </>
-            )}
-          </label>
+      <div className="ws-card p-6 sm:p-8">
+        <div className={activeTab === 'resume' ? undefined : 'hidden'}>
+          <ProfileResumeTab ref={resumeRef} record={record} />
         </div>
-      </section>
-    </div>
+
+        <div className={activeTab === 'about' ? undefined : 'hidden'}>
+          <AboutYouStep
+            ref={aboutRef}
+            embedded
+            hideFooter
+            initialValue={aboutYou ?? undefined}
+            onResidencyChange={setLiveResidency}
+            onComplete={() => {}}
+            onBack={() => {}}
+          />
+        </div>
+
+        <div className={activeTab === 'targets' ? undefined : 'hidden'}>
+          <TargetsStep
+            ref={targetsRef}
+            embedded
+            hideFooter
+            requiresSponsorship={requiresSponsorship}
+            initialValue={targetsInitial}
+            onComplete={() => {}}
+            onBack={() => {}}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          data-testid="profile-save-all"
+          onClick={() => void handleSaveAll()}
+          disabled={saving}
+          className="inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 signal-gradient text-white shadow-sm hover:opacity-95"
+        >
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+
+      <Snackbar
+        open={snackbar.open}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      />
+    </main>
   );
 }

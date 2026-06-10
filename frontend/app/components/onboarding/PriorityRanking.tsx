@@ -1,16 +1,25 @@
 'use client';
 
-/**
- * Priority-ranking control (Req 4.2).
- *
- * Presents the six priority factors as an ordered list the user reorders with
- * up/down controls. Because reordering preserves the permutation invariant, the
- * emitted ranking is always an exact permutation of the six factors — but the
- * surrounding step still runs {@link validatePriorityRanking} so the same
- * messaging path the backend enforces (Req 4.4) is exercised in the UI.
- */
+import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  type DropResult,
+} from '@hello-pangea/dnd';
 import type { PriorityFactor } from '@worksignal/shared';
+import { GripVertical } from 'lucide-react';
 import { priorityFactorLabel } from '../../onboarding/validation';
+
+function reorder(
+  list: PriorityFactor[],
+  from: number,
+  to: number,
+): PriorityFactor[] {
+  const next = [...list];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
 
 export function PriorityRanking({
   ranking,
@@ -19,54 +28,55 @@ export function PriorityRanking({
   ranking: PriorityFactor[];
   onChange: (ranking: PriorityFactor[]) => void;
 }) {
-  function move(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= ranking.length) return;
-    const next = [...ranking];
-    const a = next[index] as PriorityFactor;
-    const b = next[target] as PriorityFactor;
-    next[index] = b;
-    next[target] = a;
-    onChange(next);
+  function onDragEnd(result: DropResult) {
+    const { destination, source } = result;
+    if (!destination || destination.index === source.index) return;
+    onChange(reorder(ranking, source.index, destination.index));
   }
 
   return (
-    <ol className="flex flex-col gap-2">
-      {ranking.map((factor, index) => (
-        <li
-          key={factor}
-          className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2"
-        >
-          <span className="flex items-center gap-3">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 font-mono text-xs font-semibold text-white">
-              {index + 1}
-            </span>
-            <span className="text-sm font-medium text-gray-900">
-              {priorityFactorLabel(factor)}
-            </span>
-          </span>
-          <span className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label={`Move ${priorityFactorLabel(factor)} up`}
-              disabled={index === 0}
-              onClick={() => move(index, -1)}
-              className="rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              aria-label={`Move ${priorityFactorLabel(factor)} down`}
-              disabled={index === ranking.length - 1}
-              onClick={() => move(index, 1)}
-              className="rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30"
-            >
-              ↓
-            </button>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId="priority-ranking">
+        {(droppable) => (
+          <ol
+            ref={droppable.innerRef}
+            {...droppable.droppableProps}
+            className="flex flex-col gap-2"
+          >
+            {ranking.map((factor, index) => (
+              <Draggable key={factor} draggableId={factor} index={index}>
+                {(draggable, snapshot) => (
+                  <li
+                    ref={draggable.innerRef}
+                    {...draggable.draggableProps}
+                    className={`flex items-center gap-3 rounded-xl border bg-ws-card px-3 py-2 transition-shadow ${
+                      snapshot.isDragging
+                        ? 'border-ws-teal/40 shadow-md'
+                        : 'border-ws-line'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      {...draggable.dragHandleProps}
+                      aria-label={`Drag to reorder ${priorityFactorLabel(factor)}`}
+                      className="flex shrink-0 cursor-grab touch-none items-center rounded-md p-1 text-ws-muted hover:bg-ws-paper hover:text-ws-ink active:cursor-grabbing"
+                    >
+                      <GripVertical className="h-4 w-4" aria-hidden />
+                    </button>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ws-teal-mid font-mono text-xs font-semibold text-white">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1 text-sm font-medium text-ws-ink">
+                      {priorityFactorLabel(factor)}
+                    </span>
+                  </li>
+                )}
+              </Draggable>
+            ))}
+            {droppable.placeholder}
+          </ol>
+        )}
+      </Droppable>
+    </DragDropContext>
   );
 }

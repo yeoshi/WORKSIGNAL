@@ -180,6 +180,14 @@ function buildCoverLetterPrompt(
     'COVER-LETTER ANGLE:',
     angle,
   ];
+  if (user.cover_letter_sample_text?.trim()) {
+    lines.push(
+      '',
+      'WRITING STYLE SAMPLE (match this candidate\'s tone, voice, and level of formality —',
+      'do not copy sentences verbatim):',
+      user.cover_letter_sample_text.trim(),
+    );
+  }
   if (requiresWorkAuthorisationStatement(user)) {
     lines.push(
       '',

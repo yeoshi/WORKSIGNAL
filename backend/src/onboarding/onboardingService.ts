@@ -38,8 +38,10 @@ import {
   type CareerSwitchContext,
   type Logger,
   type NonNegotiables,
+  PRIORITY_FACTORS,
   type OnboardingService,
   type OnboardingState,
+  type ParsedProfile,
   type PriorityFactor,
   type Profile,
   type ResidencyStatus,
@@ -179,6 +181,61 @@ export class OnboardingServiceImpl implements OnboardingPersistenceApi {
     record.career_stage = stage;
     record.residency_status = residency;
 
+    await this.commit(record);
+  }
+
+  /**
+   * Persist the resume-derived profile fields after the user confirms them
+   * (Req 2.2, 2.4).
+   */
+  async confirmResumeProfile(
+    userId: string,
+    profile: ParsedProfile,
+    resumeS3Key?: string,
+  ): Promise<void> {
+    const record = await this.loadRecord(userId);
+
+    record.profile = {
+      current_role: profile.current_role,
+      years_experience: profile.years_experience,
+      skills: profile.skills,
+      education: profile.education,
+      university: profile.university,
+      basic_info: profile.basic_info,
+      education_history: profile.education_history ?? [],
+      work_experience: profile.work_experience ?? [],
+      internships: profile.internships ?? [],
+      projects: profile.projects ?? [],
+      work_samples: profile.work_samples ?? [],
+      honors_awards: profile.honors_awards ?? [],
+      languages: profile.languages ?? [],
+      self_introduction: profile.self_introduction ?? '',
+      sns_links: profile.sns_links ?? [],
+      target_roles: record.profile?.target_roles ?? [],
+      target_industries: record.profile?.target_industries ?? [],
+      dream_companies: record.profile?.dream_companies ?? [],
+      priority_ranking:
+        record.profile?.priority_ranking ?? [...PRIORITY_FACTORS],
+    };
+
+    if (resumeS3Key) {
+      record.resume_s3_key = resumeS3Key;
+    }
+
+    await this.commit(record);
+  }
+
+  /**
+   * Persist an optional cover letter sample for tone matching (Req 14.2).
+   */
+  async setCoverLetterSample(
+    userId: string,
+    s3Key: string,
+    sampleText: string,
+  ): Promise<void> {
+    const record = await this.loadRecord(userId);
+    record.cover_letter_sample_s3_key = s3Key;
+    record.cover_letter_sample_text = sampleText;
     await this.commit(record);
   }
 

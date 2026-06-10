@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Keep next-auth as a server-only external so webpack never tries to bundle
-  // it (and its node: protocol imports like node:crypto) into client chunks.
-  serverExternalPackages: ['next-auth', '@auth/core'],
+  experimental: {
+    // Keep native/CJS packages out of the webpack bundle for API routes.
+    serverComponentsExternalPackages: ['next-auth', '@auth/core', 'pdf-parse'],
+  },
   // Allow importing the shared and backend workspace packages directly as TypeScript source.
   transpilePackages: ['@worksignal/shared', '@worksignal/backend'],
   webpack: (config, { isServer, webpack: Webpack }) => {

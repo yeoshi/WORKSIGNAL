@@ -1,0 +1,61 @@
+
+
+TAN YEO SHI LEE 
+Email: yeoshitan@gmail.com | Phone: +65 9001 7585 | Linkedin: www.linkedin.com/in/yeoshi | GitHub: https://github.com/yeoshi 
+ 
+ EDUCATION  
+Singapore Management University Aug 2020 - May 2024 
+Bachelor of Science (Information Systems), Specialisation in Smart-City Management and Technology 
+● CGPA: 3.7/4.0, SMU SCIS Achievements Scholarship Programme 
+● Related Coursework: Computational Thinking, Web Application Development, Database Management, Object-Oriented Programming, 
+Analytics Foundation, Social Analytics and Application, Interaction Design and Prototyping, Machine Learning 
+● Co-Curricular Involvement: SMU VOIX (HR Director), SMU Ellipsis (PR Director), The Mentoring Circle (Mentor) 
+● Teaching Assistant: Introduction to Python (2021), Computational Thinking (2022) 
+ WORK EXPERIENCE  
+The Oddle Company | Associate Product Manager     June 2024 – Present 
+A technology company that empowers restaurants to manage their online presence and grow revenue through innovative digital solutions 
+● Developed and shipped 5+ features for Email Marketing and Loyalty, boosting customer retention and engagement for 500+ 
+restaurants. 
+● Spearheaded the development of Oddle Rewards, a 0-1 feature allowing restaurant staff to efficiently manage customer rewards on 
+their phones, reducing group redemption timing by 75% and enhancing operational efficiency 
+● Rolled out Email Marketing Automations regionally, contributing S$240K ARR and increasing repeat conversions by 5%. 
+CallBridge | Product Manager/Co-founder      June 2025 – Present 
+Community Hackathon Winner hosted by Open Government Product & People’s Association 
+● Achieved a reduction of up to 90% in the time required for deaf and hard-of-hearing users to access vital hotline and government 
+services compared to traditional relay or SMS-based solutions. 
+● Co-led concept, design, and rollout of CallBridge—a pioneering solution empowering d/Deaf and hard-of-hearing users to make 
+and receive phone calls to hotlines and essential services using real-time text-to-speech and speech-to-text technology. 
+● Built and led a cross-functional team from ideation to MVP pilot, driving agile development and weekly iterations. 
+● Coordinated pilot program: recruited and shortlisted users, ran onboarding and support, and synthesized weekly feedback for rapid 
+product improvement. 
+● Established partnerships with public and private sector hotlines; led engagement strategy for simulation calls, team training and 
+phased rollout. 
+Razer Inc. | Product Management Intern, Razer Gold June 2023 – Dec 2023 
+A multinational technology company, known as the world’s leading lifestyle brand for gamers 
+● Managed over 10 change requests, supporting the integration and optimization of payment channels and games, the improvement of 
+current business processes through development of new features and the solutioning of issues relating to tax and data reports 
+● Conceptualised, designed and managed the development of new features to ease the commission setting and channel integration of 
+merchants, which will reduce the current manual time spent to do so by 80% 
+SGAG Media Pte. Ltd. | Product Management Intern May 2022 – Aug 2022 
+A popular media company that connects with Singaporeans daily through localized digital content 
+● Scoped, designed, and developed a custom technological application that integrated monday.com and telegram using JavaScript and 
+Firebase Firestore 
+● Led product development by conducting interviews and user testing for internal and external end-users 
+● Reduced the creator support response time by 98% from an hour to less than a minute with a Telegram-based chatbot system 
+Freelance | Content Creator Mar 2021 – Present 
+● Grew audience to 280K with 13M+ video likes; delivered 1.7M+ views for brand campaigns (Wall’s Cornetto), demonstrating expertise 
+in organic growth and viral content strategy. 
+● Providing clients with end-to-end delivery including the scripting, directing, filming, editing and live streaming of video content 
+ PROJECT EXPERIENCE  
+Final Year Project - Detecting Elderly Fights in Shared Rental Flats for Willowmore 
+● Led the database management and back-end development of application to monitor elderly fights 
+● Selected as the winning team to receive the Dell Technologies Academy Cloud Native Experience Award 
+● Tech Stack: ReactJs, NodeJs, ExpressJs, MongoDB, AWS S3, Vercel, TensorFlow, OpenCV, MobileNet V2, Flask, IoT (Raspberry Pi) 
+Corporate Pass Application System for Singapore Sports School (SSP) 
+● Led the database management and back-end development of application to improve SSP’s employee benefit’s pass loaning system 
+● Selected as a winning team to further develop our application and present it to SSP’s management 
+● Tech Stack: Java, JSON Web Token, Springboot, MongoDB, JavaScript (Vue.js), HTML, CSS 
+ SKILLS, CERTIFICATIONS & EXPERIENCE  
+Technical Competencies: Programming (Python, Java, JavaScript, SQL, PHP) | Frameworks & Tools (React, Flask, Springboot, Firebase, 
+AWS, MongoDB) | Product & Analytics (Figma, Jira, Tableau, Salesforce, Spotfire). 
+Certifications: Oracle Certified Foundations (Java) 

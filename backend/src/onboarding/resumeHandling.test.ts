@@ -342,4 +342,37 @@ describe('validateParsedProfile', () => {
   it('rejects a skills array containing non-strings', () => {
     expect(validateParsedProfile({ ...valid, skills: ['ok', 3] })).toBeNull();
   });
+
+  it('accepts optional structured profile sections when well-formed', () => {
+    const structured = {
+      ...valid,
+      basic_info: {
+        full_name: 'Tan Yeo Shi Lee',
+        mobile: '+65 9001 7585',
+        email: 'yeoshitan@gmail.com',
+        preferred_location: 'Singapore',
+      },
+      work_experience: [
+        {
+          company: 'The Oddle Company',
+          title: 'Associate Product Manager',
+          start: '2024-06',
+          end: 'Present',
+          description: 'Shipped features.',
+        },
+      ],
+      sns_links: [{ platform: 'github', url: 'https://github.com/yeoshi' }],
+    };
+
+    expect(validateParsedProfile(structured)).toEqual(structured);
+  });
+
+  it('rejects malformed structured profile sections', () => {
+    expect(
+      validateParsedProfile({
+        ...valid,
+        work_experience: [{ company: 'Oddle', title: 1 }],
+      }),
+    ).toBeNull();
+  });
 });

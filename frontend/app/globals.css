@@ -59,6 +59,10 @@
     );
   }
 
+  .signal-gradient {
+    background: linear-gradient(135deg, var(--ws-teal-mid) 0%, var(--ws-teal-deep) 100%);
+  }
+
   @keyframes float-node {
     0%,
     100% {

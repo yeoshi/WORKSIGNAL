@@ -1,12 +1,18 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
+import dynamic from 'next/dynamic';
 import type { ReactNode } from 'react';
+
+const OnboardingProviders = dynamic(
+  () =>
+    import('./OnboardingProviders').then((mod) => mod.OnboardingProviders),
+  { ssr: false },
+);
 
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
-      <div className="min-h-screen bg-gray-50">{children}</div>
-    </SessionProvider>
+    <OnboardingProviders>
+      <div className="min-h-screen bg-ws-paper">{children}</div>
+    </OnboardingProviders>
   );
 }
