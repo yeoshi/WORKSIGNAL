@@ -7,8 +7,8 @@
  */
 
 import { getAuthenticatedUser, unauthorizedResponse } from '../lib/auth';
-import { getApiBaseUrl } from '../lib/apiGateway';
 import { DEMO_MODE, DEMO_NETWORK_BY_COMPANY } from '../lib/demo';
+import { listUserApplications } from '../lib/listUserApplications';
 
 export async function GET(request: Request) {
     if (DEMO_MODE) {
@@ -24,16 +24,7 @@ export async function GET(request: Request) {
     try {
         const { DynamoDBWrapper } = await import('@/app/api/lib/aws');
         const db = new DynamoDBWrapper();
-
-        // Query for the user's network suggestions.
-        // The Network_Agent stores suggestions keyed by user_id + company.
-        // We query the user's applications to find companies with ≥2 applications
-        // and then look up any persisted suggestion sets.
-        const applications = await db.query('Applications', {
-            IndexName: 'user_id-company-index',
-            KeyConditionExpression: 'user_id = :u',
-            ExpressionAttributeValues: { ':u': user.userId },
-        });
+        const applications = await listUserApplications(db, user.userId);
 
         if (!applications || applications.length === 0) {
             return new Response(null, { status: 204 });
@@ -56,29 +47,12 @@ export async function GET(request: Request) {
 
         const [company, applicationCount] = targetCompany;
 
-        const upstream = await fetch(
-            `${getApiBaseUrl()}/network?company=${encodeURIComponent(company)}`,
-            {
-                headers: {
-                    cookie: request.headers.get('cookie') ?? '',
-                },
-            },
-        );
-
-        if (upstream.status === 204) {
-            return new Response(null, { status: 204 });
-        }
-
-        if (!upstream.ok) {
-            return Response.json({
-                company,
-                application_count: applicationCount,
-                suggestions: [],
-                upcoming_events: [],
-            });
-        }
-
-        return Response.json(await upstream.json());
+        return Response.json({
+            company,
+            application_count: applicationCount,
+            suggestions: [],
+            upcoming_events: [],
+        });
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Internal server error';
         return Response.json({ error: 'Error', message }, { status: 500 });
