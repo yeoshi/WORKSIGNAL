@@ -1,3 +1,8 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -7,16 +12,28 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: true,
+  outputFileTracingRoot: path.join(__dirname, '..'),
   experimental: {
-    // Keep native/CJS packages out of the webpack bundle for API routes.
-    serverComponentsExternalPackages: ['next-auth', '@auth/core', 'pdf-parse'],
+    outputFileTracingIncludes: {
+      '/api/agent/run': [
+        '../backend/src/**/*',
+        '../shared/src/**/*',
+      ],
+    },
+    serverComponentsExternalPackages: [
+      'next-auth',
+      '@auth/core',
+      'pdf-parse',
+      '@aws-sdk/client-bedrock-runtime',
+      'tsx',
+    ],
   },
   webpack: (config, { isServer, webpack: Webpack }) => {
+    if (isServer) {
+      config.externals = [...(config.externals ?? []), 'tsx', 'tsx/esm/api'];
+    }
+
     if (!isServer) {
-      // Local AWS helpers use node: protocol imports in some code paths.
-      // (node:crypto etc). Webpack 5 treats node: as a custom scheme and can't
-      // resolve it for client bundles. Strip the prefix so the bare module name
-      // falls through to resolve.fallback, which returns an empty module.
       config.plugins.push(
         new Webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
           resource.request = resource.request.replace(/^node:/, '');
