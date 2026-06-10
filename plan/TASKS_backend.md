@@ -1,6 +1,26 @@
 # WORKSIGNAL — Backend Tasks
 **Owner:** Rose | **Deadline:** Jun 10 11:59pm | **Region:** us-east-1
+**Last updated:** Jun 10, 2026 — reflects actual deployed/tested state
 
+- user profile and resume
+
+- DONE: integrate exa for searching 
+- CHECK DASHBOARD DATABASE: 
+-- Run Agents 
+-- Get Verdicts 
+-- Save to dynamo
+-- live update Agent Run outputs to dashboard 
+-- add a clear old step (for demo)
+
+- Agent run outputs: 
+  - 4 = apply -- add to list to apply
+  - 3 = apply w caveat -- add to list to apply
+  - 2 = deadlock -- have the orchestrator re-evaluate this - apply or hold
+  - 1 = skip 
+
+- List of jobs where ambition score is high, but realism is low
+- display on Growth agent  
+- conslidate the skills required there
 
 
 ## Codebase Structure
@@ -68,28 +88,30 @@ WORKSIGNAL/
 
 ---
 
-## PROGRESS SNAPSHOT (as of Jun 10)
+## PROGRESS SNAPSHOT (as of Jun 10, updated)
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 0 — Env | ⚠️ 2/4 done | ❌ `EXA_API_KEY` missing · ❌ `ENCRYPTION_SECRET` missing |
+| Phase 0 — Env | ⚠️ 3/5 done | ❌ `EXA_API_KEY` missing · ❌ `ENCRYPTION_SECRET` missing · ✅ region/creds set |
 | Phase 1 — AWS Resources | ✅ Done | All 6 DynamoDB tables ACTIVE · S3 bucket exists · Bedrock tested |
 | Phase 2 — API Tests | ⚠️ 3/5 done | ✅ MCF · ✅ Bedrock · ✅ DynamoDB · ❌ Exa (no key) · ❓ S3 not confirmed |
 | Phase 3 — SES | ✅ Done | Both emails verified · config in `.env.local` |
-| Phase 4 — Integration Tests | ❌ Not started | — |
-| Phase 5 — Dashboard Route | ✅ Done | Fully wired to DynamoDB (no longer a stub) |
-| Phase 6 — Full Pipeline | ⚠️ Script written | `runFullFlow.ts` is complete but not yet run E2E; needs EXA_API_KEY first |
-| Phase 7 — Lambda Handlers | ❌ Not started | `handlers/` dir does not exist |
-| Phase 8 — Vercel Deploy | ❌ Not started | `NEXTAUTH_URL` still `localhost:3000` |
-| Phase 9 — E2E QA | ❌ Not started | Blocked by Phase 8 |
+| Phase 4 — Integration Tests | ❌ Not started | Blocked by EXA_API_KEY |
+| Phase 5 — Dashboard Route | ✅ Done | Fully wired to DynamoDB — real data, no stub |
+| Phase 5b — Agent/Run SSE Route | ✅ Done | `/api/agent/run` SSE pipeline runs in-process on Vercel; real-time debate log |
+| Phase 5c — Agent Run UI | ✅ Done | AgentRunModal on dashboard with live event rendering |
+| Phase 6 — Full Pipeline | ⚠️ Script + route complete | `/api/agent/run` handles it live; `runFullFlow.ts` also available; needs EXA_API_KEY |
+| Phase 7 — Lambda Handlers | ❌ Not started | `handlers/` dir does not exist; needed for autonomous/EventBridge operation |
+| Phase 8 — Vercel Deploy | ✅ Deployed | `worksignal_demo` live; `NEXTAUTH_URL` needs Vercel prod URL set in dashboard |
+| Phase 9 — E2E QA | ⚠️ Partial | Onboarding + dashboard confirmed; full pipeline run pending EXA_API_KEY |
 
 **Immediate unblocking steps (in order):**
-1. Add `EXA_API_KEY=...` to `/WORKSIGNAL/.env.aws` and `frontend/.env.local`
-2. Add `ENCRYPTION_SECRET=...` to `frontend/.env.local` (32-byte hex — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
-3. `cd backend && npx tsx src/scripts/seedDashboard.ts` — push complete user record to DynamoDB
-4. `npx tsx src/scripts/runFullFlow.ts` — run full MCF → debate → DynamoDB pipeline
-5. Start Phase 7 Lambda handlers (needed for autonomous operation and recalibration)
-6. Start Phase 8 Vercel deploy
+1. Add `EXA_API_KEY=...` to `/WORKSIGNAL/.env.aws` and `frontend/.env.local` — Risk Agent degrades without it
+2. Add `ENCRYPTION_SECRET=...` to `frontend/.env.local` (32-byte hex: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+3. Update `NEXTAUTH_URL` to Vercel prod URL in Vercel dashboard env vars
+4. `cd backend && npx tsx src/scripts/seedDashboard.ts` — ensure complete user record in DynamoDB
+5. Click "Run Agents" on dashboard or `npx tsx src/scripts/runFullFlow.ts` — verify full pipeline
+6. Build Phase 7 Lambda handlers for autonomous EventBridge operation
 
 ---
 
