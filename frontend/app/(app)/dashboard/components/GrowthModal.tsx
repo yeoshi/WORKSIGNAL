@@ -11,7 +11,7 @@ export interface GrowthModalProps {
   skills?: GrowthCardItem[];
 }
 
-export function GrowthModal({ open, onClose, skills = [] }: GrowthModalProps) {
+export function GrowthModal({ open, onClose, skills: _skills = [] }: GrowthModalProps) {
   const [titleAction, setTitleAction] = useState<ReactNode | null>(null);
 
   return (

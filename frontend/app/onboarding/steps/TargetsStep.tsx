@@ -8,7 +8,6 @@ import { forwardRef, useImperativeHandle, useState } from 'react';
 import {
   PRIORITY_FACTORS,
   type EmploymentType,
-  type NonNegotiables,
   type PriorityFactor,
   type WorkArrangement,
 } from '@worksignal/shared';
