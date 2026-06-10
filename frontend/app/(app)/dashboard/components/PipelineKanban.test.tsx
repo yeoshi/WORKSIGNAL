@@ -50,18 +50,24 @@ function makeActionItem(overrides?: Partial<ActionNeededItem>): ActionNeededItem
 const noop = async () => {};
 const noopSync = () => {};
 
+const baseProps = {
+  onOpenJob: () => {},
+  onOpenGhosted: () => {},
+  onApply: noopSync,
+  onSend: noop,
+  onSkip: noop,
+  onSave: noop,
+  onMarkSent: noop,
+};
+
 describe('PipelineKanban', () => {
-  it('renders Needs Your Decision as the first column', () => {
+  it('renders Needs Decision as the first column', () => {
     render(
       <PipelineKanban
+        {...baseProps}
         applications={[makeApplication()]}
         actionNeeded={[makeActionItem()]}
-        onOpenJob={() => {}}
-        onApply={noopSync}
-        onSend={noop}
-        onSkip={noop}
-        onSave={noop}
-        onMarkSent={noop}
+        pendingSend={[]}
       />,
     );
 
@@ -69,19 +75,18 @@ describe('PipelineKanban', () => {
     expect(columns[0]?.getAttribute('data-testid')).toBe(
       'kanban-column-needs_decision',
     );
+    expect(columns[1]?.getAttribute('data-testid')).toBe(
+      'kanban-column-pending_send',
+    );
   });
 
   it('renders decision actions on needs-decision cards only', () => {
     render(
       <PipelineKanban
+        {...baseProps}
         applications={[makeApplication()]}
         actionNeeded={[makeActionItem()]}
-        onOpenJob={() => {}}
-        onApply={noopSync}
-        onSend={noop}
-        onSkip={noop}
-        onSave={noop}
-        onMarkSent={noop}
+        pendingSend={[]}
       />,
     );
 
@@ -90,18 +95,57 @@ describe('PipelineKanban', () => {
     expect(screen.queryAllByTestId('decision-action-send')).toHaveLength(0);
   });
 
+  it('renders pending send cards with apply-on-site actions', () => {
+    render(
+      <PipelineKanban
+        {...baseProps}
+        applications={[]}
+        actionNeeded={[]}
+        pendingSend={[
+          makeActionItem({
+            job_id: 'job-007',
+            company: 'Ninja Van',
+            decision: 'apply_with_caveat',
+            user_action_required: false,
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('pending-send-kanban-card')).toBeDefined();
+    expect(screen.getByTestId('pending-send-apply-link')).toBeDefined();
+    expect(screen.getByTestId('pending-send-mark-sent')).toBeDefined();
+  });
+
+  it('opens ghosted modal trigger', () => {
+    const onOpenGhosted = vi.fn();
+    render(
+      <PipelineKanban
+        {...baseProps}
+        onOpenGhosted={onOpenGhosted}
+        applications={[
+          makeApplication({ status: 'ghosted', company: 'Wise' }),
+        ]}
+        actionNeeded={[]}
+        pendingSend={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('pipeline-ghosted-tab'));
+    expect(onOpenGhosted).toHaveBeenCalled();
+    expect(screen.getByTestId('pipeline-ghosted-count')).toHaveTextContent('1');
+    expect(screen.queryByTestId('kanban-column-ghosted')).toBeNull();
+  });
+
   it('opens job modal with showActions true from decision cards', () => {
     const onOpenJob = vi.fn();
     render(
       <PipelineKanban
+        {...baseProps}
+        onOpenJob={onOpenJob}
         applications={[]}
         actionNeeded={[makeActionItem()]}
-        onOpenJob={onOpenJob}
-        onApply={noopSync}
-        onSend={noop}
-        onSkip={noop}
-        onSave={noop}
-        onMarkSent={noop}
+        pendingSend={[]}
       />,
     );
 
@@ -113,14 +157,11 @@ describe('PipelineKanban', () => {
     const onOpenJob = vi.fn();
     render(
       <PipelineKanban
+        {...baseProps}
+        onOpenJob={onOpenJob}
         applications={[makeApplication({ job_id: 'job-001' })]}
         actionNeeded={[]}
-        onOpenJob={onOpenJob}
-        onApply={noopSync}
-        onSend={noop}
-        onSkip={noop}
-        onSave={noop}
-        onMarkSent={noop}
+        pendingSend={[]}
       />,
     );
 

@@ -9,6 +9,46 @@ import { listUserApplications } from '../lib/listUserApplications';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+function isApplyEquivalent(decision: unknown): boolean {
+  return decision === 'apply_consensus' || decision === 'apply_with_caveat';
+}
+
+function needsUserReview(md: Record<string, unknown>): boolean {
+  if (md.orchestrator_verdict) return false;
+  return md.user_action_required === true || md.decision === 'deadlock_escalate';
+}
+
+function isPendingSend(
+  md: Record<string, unknown>,
+  hasEmployerEmail: boolean,
+): boolean {
+  if (hasEmployerEmail) return false;
+  if (needsUserReview(md)) return false;
+  if (isApplyEquivalent(md.decision)) return true;
+  const orchestrator = md.orchestrator_verdict as { action?: string } | undefined;
+  return orchestrator?.action === 'apply';
+}
+
+function mapQueueItem(
+  job: Record<string, unknown>,
+  verdict: Record<string, unknown> | undefined,
+  userActionRequired: boolean,
+) {
+  const md = verdict?.master_decision as Record<string, unknown>;
+  return {
+    job_id: job.job_id,
+    application_id: null,
+    company: job.company,
+    role_title: job.role_title,
+    decision: md?.decision ?? null,
+    user_action_required: userActionRequired,
+    reason: md?.summary ?? null,
+    created_at: verdict?.created_at ?? null,
+    has_employer_email: !!job.employer_email,
+    source_url: job.source_url ?? null,
+  };
+}
+
 function buildNetworkSummary(
   applications: Array<Record<string, unknown>>,
 ): Array<{ company: string; application_count: number; suggestion_count: number }> {
@@ -88,25 +128,22 @@ export async function GET() {
     const actionNeeded = verdictChecks
       .filter(({ verdict }) => {
         const md = verdict?.master_decision as Record<string, unknown> | undefined;
-        return (
-          md?.user_action_required === true || md?.decision === 'deadlock_escalate'
-        );
+        if (!md) return false;
+        return needsUserReview(md);
       })
-      .map(({ job, verdict }) => {
-        const md = verdict?.master_decision as Record<string, unknown>;
-        return {
-          job_id: job.job_id,
-          application_id: null,
-          company: job.company,
-          role_title: job.role_title,
-          decision: md?.decision ?? null,
-          user_action_required: true,
-          reason: md?.summary ?? null,
-          created_at: verdict?.created_at ?? null,
-          has_employer_email: !!job.employer_email,
-          source_url: job.source_url ?? null,
-        };
-      });
+      .map(({ job, verdict }) =>
+        mapQueueItem(job as Record<string, unknown>, verdict, true),
+      );
+
+    const pendingSend = verdictChecks
+      .filter(({ job, verdict }) => {
+        const md = verdict?.master_decision as Record<string, unknown> | undefined;
+        if (!md) return false;
+        return isPendingSend(md, !!job.employer_email);
+      })
+      .map(({ job, verdict }) =>
+        mapQueueItem(job as Record<string, unknown>, verdict, false),
+      );
 
     const byStatus: Record<string, number> = {};
     for (const app of applications) {
@@ -148,6 +185,7 @@ export async function GET() {
         jobs_in_review: unappliedJobs.length,
       },
       action_needed: actionNeeded,
+      pending_send: pendingSend,
       pipeline: {
         total: applications.length,
         by_status: byStatus,

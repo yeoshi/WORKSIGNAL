@@ -113,8 +113,8 @@ export function OrchestratorPanel({
         <div className="flex items-center gap-3">
           <AgentAvatar agent="orchestrator" size={44} />
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Orchestrator's Take</h2>
-            <p className="text-[11px] text-gray-500">Deadlock resolved</p>
+            <h2 className="text-sm font-semibold text-gray-900">Orchestrator decision</h2>
+            <p className="text-[11px] text-gray-500">Final call on this role</p>
           </div>
         </div>
         <span

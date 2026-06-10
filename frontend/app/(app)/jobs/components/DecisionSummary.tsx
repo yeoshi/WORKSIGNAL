@@ -1,4 +1,10 @@
-import type { AgentName, Decision, MasterDecision } from '@/app/types/shared';
+import type {
+  AgentName,
+  Decision,
+  EnrichedMasterDecision,
+  MasterDecision,
+  OrchestratorVerdict,
+} from '@/app/types/shared';
 import { AgentAvatar } from '../../../components/ui/AgentAvatar';
 import { AGENT_THEME } from './agentTheme';
 import {
@@ -7,7 +13,7 @@ import {
 } from '../lib/getDecisionTier';
 
 export interface DecisionSummaryProps {
-  decision: MasterDecision;
+  decision: MasterDecision | EnrichedMasterDecision;
 }
 
 const DECISION_LABEL: Record<Decision, string> = {
@@ -22,9 +28,29 @@ function agentLabel(agent: AgentName): string {
   return AGENT_THEME[agent].label;
 }
 
+function resolveDecisionLabel(
+  decision: Decision,
+  orchestratorVerdict?: OrchestratorVerdict | null,
+): string {
+  if (orchestratorVerdict?.action === 'apply') {
+    return DECISION_LABEL.apply_with_caveat;
+  }
+  if (orchestratorVerdict?.action === 'upskill') {
+    return 'Build skills first';
+  }
+  if (orchestratorVerdict?.action === 'hold') {
+    return DECISION_LABEL.skip_consensus;
+  }
+  return DECISION_LABEL[decision];
+}
+
 export function DecisionSummary({ decision }: DecisionSummaryProps) {
-  const tier = getDecisionTier(decision.decision);
+  const orchestratorVerdict =
+    'orchestrator_verdict' in decision ? decision.orchestrator_verdict : undefined;
+  const tier = getDecisionTier(decision.decision, orchestratorVerdict);
   const tierStyles = DECISION_TIER_STYLES[tier];
+  const showActionRequired =
+    decision.user_action_required && !orchestratorVerdict;
 
   return (
     <section
@@ -43,7 +69,7 @@ export function DecisionSummary({ decision }: DecisionSummaryProps) {
           className="rounded-full px-3 py-1 text-sm font-semibold text-white"
           style={{ backgroundColor: tierStyles.badge }}
         >
-          {DECISION_LABEL[decision.decision]}
+          {resolveDecisionLabel(decision.decision, orchestratorVerdict)}
         </span>
       </div>
 
@@ -51,7 +77,7 @@ export function DecisionSummary({ decision }: DecisionSummaryProps) {
         {decision.summary}
       </p>
 
-      {decision.user_action_required ? (
+      {showActionRequired ? (
         <p
           data-testid="decision-action-required"
           className="mt-3 rounded-lg bg-amber-100/80 px-3 py-2 text-sm font-medium text-amber-900"

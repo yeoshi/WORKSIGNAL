@@ -1,6 +1,11 @@
 import type { AgentName } from '@/app/types/shared';
 
-export type ExtendedAgentName = AgentName | 'orchestrator' | 'growth' | 'network';
+export type ExtendedAgentName =
+  | AgentName
+  | 'orchestrator'
+  | 'recalibration'
+  | 'growth'
+  | 'network';
 
 export const AGENT_AVATAR_PATHS: Record<ExtendedAgentName, string> = {
   ambition: '/agents/Ambition.png',
@@ -8,6 +13,7 @@ export const AGENT_AVATAR_PATHS: Record<ExtendedAgentName, string> = {
   risk: '/agents/Risk.png',
   opportunity: '/agents/Opportunity.png',
   orchestrator: '/agents/Orchestrator.png',
+  recalibration: '/agents/Recalibration.png',
   growth: '/agents/Growth.png',
   network: '/agents/Network.png',
 };

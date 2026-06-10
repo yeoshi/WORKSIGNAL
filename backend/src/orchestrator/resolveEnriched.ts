@@ -27,6 +27,7 @@
 import type {
   EnrichedMasterDecision,
   Job,
+  MasterDecision,
   OrchestratorAction,
   OrchestratorVerdict,
   SkillGapSummary,
@@ -65,6 +66,29 @@ export function shouldRunReasoningPass(
     return true;
   }
   return false;
+}
+
+/**
+ * When the Orchestrator reasoning pass fires, it becomes the final authority.
+ * Deadlocks and borderline applies are remapped so the user never sees a raw
+ * `deadlock_escalate` after orchestration — apply resolves to
+ * `apply_with_caveat`; other actions map to skip.
+ */
+function applyOrchestratorDecisionOverride(
+  base: MasterDecision,
+  orchestrator_verdict: OrchestratorVerdict,
+): MasterDecision {
+  const next: MasterDecision = {
+    ...base,
+    user_action_required: false,
+    summary: orchestrator_verdict.holistic_summary || base.summary,
+  };
+
+  if (orchestrator_verdict.action === 'apply') {
+    return { ...next, decision: 'apply_with_caveat' };
+  }
+
+  return { ...next, decision: 'skip_consensus' };
 }
 
 /**
@@ -173,8 +197,10 @@ export async function resolveEnriched(
     ...(heuristic.upskill_targets !== undefined && { upskill_targets: heuristic.upskill_targets }),
   };
 
+  const finalized = applyOrchestratorDecisionOverride(floored, orchestrator_verdict);
+
   return {
-    ...floored,
+    ...finalized,
     resolved_action: heuristic.action,
     orchestrator_verdict,
   };
